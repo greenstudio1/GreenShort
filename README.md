@@ -21,6 +21,9 @@ on third-party services, without paying subscriptions, and without
 worrying about servers. You only need a Cloudflare account, a domain
 (or the free Pages subdomain), and to follow the setup steps.
 
+<p align="center">
+  <img src="https://github.com/quasvx/GreenShort/blob/main/gs-files/static/github/AnalyticsDashboardPreview.png?raw=true" alt="Analytics Dashboard Preview" width="850">
+</p>
 
 ---
 
@@ -79,6 +82,9 @@ user.
 The entire dashboard uses a dark, minimal design with green
 accents, optimized for both desktop and mobile.
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/quasvx/GreenShort/main/gs-files/static/github/LinksDashboardPreview.png" alt="Links Dashboard Preview" width="850">
+</p>
 
 ---
 
@@ -128,6 +134,10 @@ Before deploying, make sure you have:
   - `MAX_EXPIRATION_DAYS` - optional, defaults to `365`.
   - `AI_MODEL` - optional, the Workers AI model to use for
     slug generation.
+
+    <p align="center">
+  <img src="https://raw.githubusercontent.com/quasvx/GreenShort/refs/heads/main/gs-files/static/github/ENVsPreview.png" alt="ENVs Preview" width="850">
+</p>
 
 
 ---
@@ -220,6 +230,9 @@ publicly. Treat it like a password.
 
 That is it. No build step, no external services, no maintenance.
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/quasvx/GreenShort/refs/heads/main/gs-files/static/github/BindingsPreview.png" alt="Bindings Preview" width="850">
+</p>
 
 ---
 

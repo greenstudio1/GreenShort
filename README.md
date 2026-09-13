@@ -135,8 +135,8 @@ Before deploying, make sure you have:
   - `AI_MODEL` - optional, the Workers AI model to use for
     slug generation.
 
-    <p align="center">
-  <img src="https://raw.githubusercontent.com/quasvx/GreenShort/refs/heads/main/gs-files/static/github/ENVsPreview.png" alt="ENVs Preview" width="850">
+<p align="center">
+  <img src="https://raw.githubusercontent.com/quasvx/GreenShort/refs/heads/main/gs-files/static/github/ENVsPreview.png" alt="ENVs Preview" width="400">
 </p>
 
 

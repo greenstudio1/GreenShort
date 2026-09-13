@@ -112,5 +112,9 @@
   "captcha_placeholder": "·····",
   "captcha_btn": "驗證",
   "captcha_error": "驗證碼錯誤",
-  "th_flow_ip": "IP"
+  "th_flow_ip": "IP",
+  "btn_copy": "複製",
+  "btn_qr": "二維碼",
+  "btn_edit": "編輯",
+  "btn_delete": "刪除"
 }

@@ -112,5 +112,9 @@
   "captcha_placeholder": "·····",
   "captcha_btn": "Проверить",
   "captcha_error": "Неверный код",
-  "th_flow_ip": "IP"
+  "th_flow_ip": "IP",
+  "btn_copy": "Копировать",
+  "btn_qr": "QR",
+  "btn_edit": "Редактировать",
+  "btn_delete": "Удалить"
 }

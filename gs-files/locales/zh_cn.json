@@ -112,5 +112,9 @@
   "captcha_placeholder": "·····",
   "captcha_btn": "验证",
   "captcha_error": "验证码错误",
-  "th_flow_ip": "IP"
+  "th_flow_ip": "IP",
+  "btn_copy": "复制",
+  "btn_qr": "二维码",
+  "btn_edit": "编辑",
+  "btn_delete": "删除"
 }

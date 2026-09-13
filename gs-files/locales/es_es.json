@@ -112,5 +112,9 @@
   "captcha_placeholder": "·····",
   "captcha_btn": "Verificar",
   "captcha_error": "Código incorrecto",
-  "th_flow_ip": "IP"
+  "th_flow_ip": "IP",
+  "btn_copy": "Copy",
+  "btn_qr": "QR",
+  "btn_edit": "Edit",
+  "btn_delete": "Delete"
 }

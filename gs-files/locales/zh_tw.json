@@ -105,5 +105,12 @@
   "empty_hubs": "暫無連結組，建立第一個 ✨",
   "empty_data": "暫無資料",
   "no_clicks": "無點擊",
-  "max_chars": "最多 %d 字元"
+  "max_chars": "最多 %d 字元",
+  "lbl_captcha": "🧩 要求驗證碼",
+  "captcha_title": "安全驗證",
+  "captcha_desc": "輸入圖片中的代碼",
+  "captcha_placeholder": "·····",
+  "captcha_btn": "驗證",
+  "captcha_error": "驗證碼錯誤",
+  "th_flow_ip": "IP"
 }

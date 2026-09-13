@@ -1,6 +1,6 @@
 // functions/[[path]].js
 
-import { RESERVED_SLUGS, SVG_FAVICON, initDB, authCheck, json, genRandomSlug, validateSlugFormat, recordAnalytics } from './lib.js';
+import { RESERVED_SLUGS, isReservedSlug, SVG_FAVICON, initDB, authCheck, json, genRandomSlug, genLinkId, validateSlugFormat, genCaptchaText, hmacSign, verifyCaptchaCookie, makeCaptchaCookie, recordAnalytics } from './lib.js';
 
 export async function onRequest(context) {
   try {
@@ -22,11 +22,82 @@ export async function onRequest(context) {
 
     if (prefix === "api") {
       await initDB(env.DB);
-      if (!authCheck(request, env)) return json({ error: "Unauthorized" }, 401);
       const action = segments[1];
 
+      if (action === "captcha-challenge" && request.method === "GET") {
+        const slug = url.searchParams.get("slug");
+        if (!slug) return json({ error: "Falta slug" }, 400);
+        const link = await env.DB.prepare("SELECT captcha, captcha_secret FROM links WHERE slug = ?").bind(slug).first();
+        if (!link || !link.captcha || !link.captcha_secret) return json({ error: "Captcha no configurado" }, 404);
+
+        const text = genCaptchaText(5);
+        const sig = await hmacSign(link.captcha_secret, "challenge_" + slug + "_" + text);
+        const payload = btoa(slug + "|" + text);
+        const challengeId = sig + "." + payload;
+
+        const w = 200;
+        const h = 70;
+        const charWidth = (w - 20) / (text.length + 1);
+        const layout = [];
+        for (let i = 0; i < text.length; i++) {
+          layout.push({
+            char: text[i],
+            x: 10 + charWidth * (i + 0.8) + (Math.random() - 0.5) * 14,
+            y: h / 2 + (Math.random() - 0.5) * 16,
+            rotate: (Math.random() - 0.5) * 1.2,
+            scaleX: 0.85 + Math.random() * 0.5,
+            scaleY: 0.85 + Math.random() * 0.5,
+            fontSize: 24 + Math.random() * 14,
+            hue: 150 + Math.random() * 40,
+            light: 50 + Math.random() * 25,
+            shadowX: (Math.random() - 0.5) * 4,
+            shadowY: (Math.random() - 0.5) * 4
+          });
+        }
+
+        const points = [];
+        for (let i = 0; i < 120; i++) {
+          points.push({ x: Math.random() * w, y: Math.random() * h, r: Math.random() * 2, alpha: 0.1 + Math.random() * 0.5 });
+        }
+        const lines = [];
+        for (let i = 0; i < 4; i++) {
+          lines.push({
+            x1: Math.random() * w, y1: Math.random() * h,
+            cx1: Math.random() * w, cy1: Math.random() * h,
+            cx2: Math.random() * w, cy2: Math.random() * h,
+            x2: Math.random() * w, y2: Math.random() * h,
+            alpha: 0.25 + Math.random() * 0.3,
+            width: 1 + Math.random() * 2
+          });
+        }
+        const blobs = [];
+        for (let i = 0; i < 5; i++) {
+          blobs.push({ x: Math.random() * w, y: Math.random() * h, r: 10 + Math.random() * 20, alpha: 0.05 + Math.random() * 0.1 });
+        }
+        const shortLines = [];
+        for (let i = 0; i < 40; i++) {
+          const x1 = Math.random() * w;
+          const y1 = Math.random() * h;
+          shortLines.push({ x1, y1, x2: x1 + (Math.random() - 0.5) * 20, y2: y1 + (Math.random() - 0.5) * 20, alpha: 0.15 + Math.random() * 0.4 });
+        }
+
+        return json({
+          challengeId,
+          width: w,
+          height: h,
+          layout,
+          noise: { points, lines, blobs, shortLines }
+        });
+      }
+
+      if (!authCheck(request, env)) return json({ error: "Unauthorized" }, 401);
+
       if (action === "config" && request.method === "GET") {
-        return json({ maxSlugLength: MAX_SLUG_LENGTH, maxExpirationDays: MAX_EXPIRATION_DAYS });
+        return json({
+          maxSlugLength: MAX_SLUG_LENGTH,
+          maxExpirationDays: MAX_EXPIRATION_DAYS,
+          reservedSlugs: Array.from(RESERVED_SLUGS)
+        });
       }
 
       if (action === "storage" && request.method === "GET") {
@@ -51,13 +122,16 @@ export async function onRequest(context) {
 
       if (action === "links" && request.method === "GET") {
         const { results } = await env.DB.prepare(
-          "SELECT slug, type, target_url, splat, password, expires_at, created_at FROM links ORDER BY created_at DESC"
+          "SELECT slug, type, target_url, splat, password, captcha, expires_at, created_at, link_id, created_at_ms FROM links ORDER BY created_at DESC"
         ).all();
 
         let clicksMap = {};
         if (env.ANALYTICS && env.CF_ACCOUNT_ID && env.CF_API_TOKEN) {
           try {
-            const query = `SELECT blob1 AS slug, count() AS clicks FROM greenshort GROUP BY slug`;
+            const linkBySlug = {};
+            for (const l of results) linkBySlug[l.slug] = l;
+
+            const query = `SELECT blob1 AS slug, blob6 AS link_id, timestamp FROM greenshort ORDER BY timestamp DESC LIMIT 10000`;
             const aeRes = await fetch(
               `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/analytics_engine/sql`,
               { method: "POST", headers: { "Authorization": `Bearer ${env.CF_API_TOKEN}` }, body: query }
@@ -65,7 +139,15 @@ export async function onRequest(context) {
             const aeData = await aeRes.json();
             if (aeRes.ok && aeData.data) {
               for (const row of aeData.data) {
-                clicksMap[row.slug] = Number(row.clicks) || 0;
+                const link = linkBySlug[row.slug];
+                if (!link) continue;
+                if (link.link_id && row.link_id && row.link_id !== link.link_id) continue;
+                if (link.created_at_ms) {
+                  const eventTs = new Date(row.timestamp).getTime();
+                  if (!isNaN(eventTs) && eventTs < link.created_at_ms) continue;
+                }
+                const key = link.link_id || row.slug;
+                clicksMap[key] = (clicksMap[key] || 0) + 1;
               }
             }
           } catch (e) {
@@ -73,7 +155,10 @@ export async function onRequest(context) {
           }
         }
 
-        const enriched = results.map(l => ({ ...l, clicks: clicksMap[l.slug] || 0 }));
+        const enriched = results.map(l => ({
+          ...l,
+          clicks: clicksMap[l.link_id] || clicksMap[l.slug] || 0
+        }));
         return json(enriched);
       }
 
@@ -82,7 +167,7 @@ export async function onRequest(context) {
         const config = await env.DB.prepare(`
           SELECT h.slug, h.mode, h.title, h.bio, h.theme_palette, h.btn_style,
                  h.bg_type, h.bg_val, h.custom_html, h.lang_mode, h.items_json,
-                 l.password
+                 l.password, l.captcha
           FROM hub_configs h
           LEFT JOIN links l ON l.slug = h.slug
           WHERE h.slug = ?
@@ -171,16 +256,15 @@ export async function onRequest(context) {
 
       if (action === "create" && request.method === "POST") {
         const body = await request.json();
-        let { slug, targetUrl, splat, length, mode, password, expAmount, expUnit } = body;
+        let { slug, targetUrl, splat, length, mode, password, captcha, expAmount, expUnit } = body;
         if (!slug) slug = genRandomSlug(parseInt(length) || 6, mode || "alphanumeric");
         slug = slug.trim().toLowerCase().replace(/^\/+|\/+$/g, "").replace(/\/+/g, "/");
         if (slug.length > MAX_SLUG_LENGTH) return json({ error: `Slug máximo ${MAX_SLUG_LENGTH} caracteres` }, 400);
-        if (!validateSlugFormat(slug)) return json({ error: "Slug solo puede tener letras, números, guion bajo (_) y barra (/). No puede empezar ni terminar con / ni tener // consecutivos" }, 400);
-        if (RESERVED_SLUGS.has(slug.split("/")[0])) return json({ error: "Ruta reservada" }, 400);
+        if (!validateSlugFormat(slug)) return json({ error: "Slug inválido" }, 400);
+        if (isReservedSlug(slug)) return json({ error: "Ruta reservada" }, 400);
         if (!targetUrl) return json({ error: "Falta la URL de destino" }, 400);
         try { new URL(targetUrl); } catch { return json({ error: "URL inválida" }, 400); }
 
-        // Verificar conflicto con subrutas existentes
         const conflict = await env.DB.prepare(
           "SELECT slug FROM links WHERE slug LIKE ? OR slug = ?"
         ).bind(slug + "/%", slug).first();
@@ -188,7 +272,6 @@ export async function onRequest(context) {
           return json({ error: "Conflicto con una ruta existente: /" + conflict.slug }, 400);
         }
 
-        // Verificar si un slug padre con splat captura esta ruta
         const parts = slug.split("/");
         for (let i = 1; i < parts.length; i++) {
           const parentSlug = parts.slice(0, i).join("/");
@@ -197,6 +280,15 @@ export async function onRequest(context) {
             return json({ error: "Conflicto: /" + parentSlug + " ya captura esta ruta con splat activado" }, 400);
           }
         }
+
+        const existing = await env.DB.prepare(
+          "SELECT target_url, link_id, created_at_ms FROM links WHERE slug = ?"
+        ).bind(slug).first();
+
+        const targetChanged = !existing || existing.target_url !== targetUrl;
+        const now = Date.now();
+        const finalLinkId = targetChanged ? genLinkId() : (existing.link_id || genLinkId());
+        const finalCreatedAtMs = targetChanged ? now : (existing.created_at_ms || now);
 
         let expiresAtTimestamp = null;
         if (expUnit !== 'never' && expAmount && parseInt(expAmount) > 0) {
@@ -204,18 +296,39 @@ export async function onRequest(context) {
           const requestedMs = parseInt(expAmount) * (mult[expUnit] || 60000);
           expiresAtTimestamp = Date.now() + Math.min(requestedMs, MAX_EXPIRATION_MS);
         }
-        await env.DB.prepare(`INSERT INTO links (slug, type, target_url, splat, password, expires_at) VALUES (?, 'direct', ?, ?, ?, ?) ON CONFLICT(slug) DO UPDATE SET type='direct', target_url=excluded.target_url, splat=excluded.splat, password=excluded.password, expires_at=CASE WHEN excluded.expires_at IS NOT NULL THEN excluded.expires_at ELSE links.expires_at END`).bind(slug, targetUrl, splat ? 1 : 0, password?.trim() || null, expiresAtTimestamp).run();
-        return json({ success: true, slug });
+
+        const captchaFlag = captcha ? 1 : 0;
+        let captchaSecret = null;
+        if (captchaFlag) {
+          captchaSecret = crypto.randomUUID().replace(/-/g, "") + genRandomSlug(16);
+        }
+
+        await env.DB.prepare(`
+          INSERT INTO links (slug, type, target_url, splat, password, captcha, captcha_secret, expires_at, link_id, created_at_ms)
+          VALUES (?, 'direct', ?, ?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT(slug) DO UPDATE SET
+            type='direct',
+            target_url=excluded.target_url,
+            splat=excluded.splat,
+            password=excluded.password,
+            captcha=excluded.captcha,
+            captcha_secret=CASE WHEN excluded.captcha = 1 AND excluded.captcha_secret IS NOT NULL THEN excluded.captcha_secret ELSE links.captcha_secret END,
+            expires_at=CASE WHEN excluded.expires_at IS NOT NULL THEN excluded.expires_at ELSE links.expires_at END,
+            link_id=excluded.link_id,
+            created_at_ms=excluded.created_at_ms
+        `).bind(slug, targetUrl, splat ? 1 : 0, password?.trim() || null, captchaFlag, captchaSecret, expiresAtTimestamp, finalLinkId, finalCreatedAtMs).run();
+
+        return json({ success: true, slug, link_id: finalLinkId });
       }
 
       if (action === "save-hub" && request.method === "POST") {
         const body = await request.json();
-        let { slug, mode, title, bio, theme_palette, btn_style, bg_type, bg_val, custom_html, lang_mode, items, password } = body;
+        let { slug, mode, title, bio, theme_palette, btn_style, bg_type, bg_val, custom_html, lang_mode, items, password, captcha } = body;
         slug = (slug || "").trim().toLowerCase().replace(/^\/+|\/+$/g, "").replace(/\/+/g, "/");
         if (!slug) return json({ error: "Slug requerido" }, 400);
         if (slug.length > MAX_SLUG_LENGTH) return json({ error: `Slug máximo ${MAX_SLUG_LENGTH} caracteres` }, 400);
-        if (!validateSlugFormat(slug)) return json({ error: "Slug solo puede tener letras, números, guion bajo (_) y barra (/). No puede empezar ni terminar con / ni tener // consecutivos" }, 400);
-        if (RESERVED_SLUGS.has(slug.split("/")[0])) return json({ error: "Ruta reservada" }, 400);
+        if (!validateSlugFormat(slug)) return json({ error: "Slug inválido" }, 400);
+        if (isReservedSlug(slug)) return json({ error: "Ruta reservada" }, 400);
 
         const conflict = await env.DB.prepare(
           "SELECT slug FROM links WHERE slug LIKE ? OR slug = ?"
@@ -233,15 +346,39 @@ export async function onRequest(context) {
           }
         }
 
+        const existing = await env.DB.prepare(
+          "SELECT link_id, created_at_ms FROM links WHERE slug = ?"
+        ).bind(slug).first();
+
+        const now = Date.now();
+        const finalLinkId = existing && existing.link_id ? existing.link_id : genLinkId();
+        const finalCreatedAtMs = existing && existing.created_at_ms ? existing.created_at_ms : now;
+
+        const captchaFlag = captcha ? 1 : 0;
+        let captchaSecret = null;
+        if (captchaFlag) {
+          captchaSecret = crypto.randomUUID().replace(/-/g, "") + genRandomSlug(16);
+        }
+
         await env.DB.batch([
-          env.DB.prepare(`INSERT INTO links (slug, type, target_url, splat, password) VALUES (?, 'group', '', 0, ?) ON CONFLICT(slug) DO UPDATE SET type='group', password=excluded.password`).bind(slug, password?.trim() || null),
+          env.DB.prepare(`
+            INSERT INTO links (slug, type, target_url, splat, password, captcha, captcha_secret, link_id, created_at_ms)
+            VALUES (?, 'group', '', 0, ?, ?, ?, ?, ?)
+            ON CONFLICT(slug) DO UPDATE SET
+              type='group',
+              password=excluded.password,
+              captcha=excluded.captcha,
+              captcha_secret=CASE WHEN excluded.captcha = 1 AND excluded.captcha_secret IS NOT NULL THEN excluded.captcha_secret ELSE links.captcha_secret END,
+              link_id=excluded.link_id,
+              created_at_ms=excluded.created_at_ms
+          `).bind(slug, password?.trim() || null, captchaFlag, captchaSecret, finalLinkId, finalCreatedAtMs),
           env.DB.prepare(`INSERT INTO hub_configs (slug, mode, title, bio, theme_palette, btn_style, bg_type, bg_val, custom_html, lang_mode, items_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(slug) DO UPDATE SET mode=excluded.mode, title=excluded.title, bio=excluded.bio, theme_palette=excluded.theme_palette, btn_style=excluded.btn_style, bg_type=excluded.bg_type, bg_val=excluded.bg_val, custom_html=excluded.custom_html, lang_mode=excluded.lang_mode, items_json=excluded.items_json`).bind(
             slug, mode || "builder", title || slug, bio || "", theme_palette || "emerald",
             btn_style || "rounded", bg_type || "palette", bg_val || "",
             custom_html || "", lang_mode || "auto", JSON.stringify(items || [])
           )
         ]);
-        return json({ success: true, slug });
+        return json({ success: true, slug, link_id: finalLinkId });
       }
 
       if (action === "delete" && request.method === "POST") {
@@ -261,16 +398,32 @@ export async function onRequest(context) {
         if (!env.ANALYTICS) return json({ error: "Analytics Engine binding 'ANALYTICS' no configurado" }, 400);
         if (!env.CF_ACCOUNT_ID || !env.CF_API_TOKEN) return json({ error: "Variables CF_ACCOUNT_ID y CF_API_TOKEN requeridas" }, 400);
         try {
-          const query = `SELECT blob1 AS slug, blob2 AS country, blob3 AS user_agent, double1 AS is_bot, timestamp FROM greenshort ORDER BY timestamp DESC LIMIT 150`;
+          const { results: currentLinks } = await env.DB.prepare("SELECT slug, link_id, created_at_ms FROM links").all();
+          const linkBySlug = {};
+          for (const l of currentLinks) linkBySlug[l.slug] = l;
+
+          const query = `SELECT blob1 AS slug, blob2 AS country, blob3 AS user_agent, blob5 AS ip, blob6 AS link_id, timestamp FROM greenshort ORDER BY timestamp DESC LIMIT 1000`;
           const aeRes = await fetch(
             `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/analytics_engine/sql`,
             { method: "POST", headers: { "Authorization": `Bearer ${env.CF_API_TOKEN}` }, body: query }
           );
           const aeData = await aeRes.json();
           if (!aeRes.ok) return json({ error: aeData.errors?.[0]?.message || "Error" }, 500);
-          const rows = (aeData.data || []).map(r => ({
-            slug: r.slug, country: r.country, user_agent: r.user_agent, is_bot: r.is_bot, created_at: r.timestamp
-          }));
+          const rows = (aeData.data || [])
+            .filter(r => {
+              const link = linkBySlug[r.slug];
+              if (!link) return false;
+              if (link.link_id && r.link_id && r.link_id !== link.link_id) return false;
+              if (link.created_at_ms) {
+                const eventTs = new Date(r.timestamp).getTime();
+                if (!isNaN(eventTs) && eventTs < link.created_at_ms) return false;
+              }
+              return true;
+            })
+            .slice(0, 150)
+            .map(r => ({
+              slug: r.slug, country: r.country, user_agent: r.user_agent, ip: r.ip, created_at: r.timestamp
+            }));
           return json(rows);
         } catch (e) {
           return json({ error: "Fallo: " + (e.message || "Error") }, 500);
@@ -281,18 +434,33 @@ export async function onRequest(context) {
         if (!env.ANALYTICS) return json({ error: "Analytics Engine binding 'ANALYTICS' no configurado" }, 400);
         if (!env.CF_ACCOUNT_ID || !env.CF_API_TOKEN) return json({ error: "Variables CF_ACCOUNT_ID y CF_API_TOKEN requeridas" }, 400);
         const limit = parseInt(url.searchParams.get("limit")) || 100;
-        const onlyHumans = url.searchParams.get("humans") === "true";
         try {
-          let query = `SELECT blob1 AS slug, blob2 AS country, blob3 AS user_agent, blob4 AS referrer, double1 AS is_bot, timestamp FROM greenshort ${onlyHumans ? "WHERE double1 = 0" : ""} ORDER BY timestamp DESC LIMIT ${limit}`;
+          const { results: currentLinks } = await env.DB.prepare("SELECT slug, link_id, created_at_ms FROM links").all();
+          const linkBySlug = {};
+          for (const l of currentLinks) linkBySlug[l.slug] = l;
+
+          const query = `SELECT blob1 AS slug, blob2 AS country, blob3 AS user_agent, blob4 AS referrer, blob5 AS ip, blob6 AS link_id, timestamp FROM greenshort ORDER BY timestamp DESC LIMIT ${limit * 5}`;
           const aeRes = await fetch(
             `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/analytics_engine/sql`,
             { method: "POST", headers: { "Authorization": `Bearer ${env.CF_API_TOKEN}` }, body: query }
           );
           const aeData = await aeRes.json();
           if (!aeRes.ok) return json({ error: aeData.errors?.[0]?.message || "Error" }, 500);
-          const rows = (aeData.data || []).map(r => ({
-            slug: r.slug, country: r.country, user_agent: r.user_agent, referrer: r.referrer, is_bot: r.is_bot, timestamp: r.timestamp
-          }));
+          const rows = (aeData.data || [])
+            .filter(r => {
+              const link = linkBySlug[r.slug];
+              if (!link) return false;
+              if (link.link_id && r.link_id && r.link_id !== link.link_id) return false;
+              if (link.created_at_ms) {
+                const eventTs = new Date(r.timestamp).getTime();
+                if (!isNaN(eventTs) && eventTs < link.created_at_ms) return false;
+              }
+              return true;
+            })
+            .slice(0, limit)
+            .map(r => ({
+              slug: r.slug, country: r.country, user_agent: r.user_agent, referrer: r.referrer, ip: r.ip, timestamp: r.timestamp
+            }));
           return json(rows);
         } catch (e) {
           return json({ error: "Fallo: " + (e.message || "Error") }, 500);
@@ -306,16 +474,8 @@ export async function onRequest(context) {
 
     await initDB(env.DB);
 
-    // ✅ Buscar el slug MÁS LARGO posible que exista en la DB
-    // Ej: /git/q/extra
-    //   - Prueba "git/q/extra" → no existe
-    //   - Prueba "git/q" → existe ✅ → matchedSlug = "git/q", remaining = ["extra"]
-    //   - Si "git/q" no tuviera splat, no se usaría para /extra, pero como es el match más largo,
-    //     se sigue usando "git/q" y se ignora "extra" (a menos que tenga splat)
-    //   - El splat solo decide si se concatena el resto al destino
     let link = null;
     let matchedSlug = "";
-    let matchedSegments = 0;
     let remainingSegments = [];
 
     for (let i = segments.length; i >= 1; i--) {
@@ -324,7 +484,6 @@ export async function onRequest(context) {
       if (found) {
         link = found;
         matchedSlug = candidateSlug;
-        matchedSegments = i;
         remainingSegments = segments.slice(i);
         break;
       }
@@ -339,8 +498,11 @@ export async function onRequest(context) {
     if (link.password) {
       let userPass = "";
       if (request.method === "POST") {
-        const formData = await request.formData();
-        userPass = formData.get("password") || "";
+        const contentType = request.headers.get("Content-Type") || "";
+        if (contentType.includes("application/x-www-form-urlencoded") || contentType.includes("multipart/form-data")) {
+          const formData = await request.formData();
+          userPass = formData.get("password") || "";
+        }
       } else {
         userPass = url.searchParams.get("pwd") || "";
       }
@@ -348,14 +510,62 @@ export async function onRequest(context) {
         const htmlRes = await fetch(new URL("/gs/password.html", url.origin));
         let html = await htmlRes.text();
         html = html.replace(/{{slug}}/g, matchedSlug);
-        html = html.replace(/{{hasError}}/g, userPass ? '<div class="err">Contraseña incorrecta</div>' : '');
+        html = html.replace(/{{hasError}}/g, userPass ? 'true' : 'false');
+        html = html.replace(/{{[a-z_]+}}/gi, '');
         return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8" } });
       }
     }
 
-    recordAnalytics(context, env, matchedSlug, request);
+    if (link.captcha && link.captcha_secret) {
+      const isOk = await verifyCaptchaCookie(request, env, matchedSlug);
+      if (!isOk) {
+        let userAnswer = "";
+        let challengeId = "";
+        if (request.method === "POST") {
+          const contentType = request.headers.get("Content-Type") || "";
+          if (contentType.includes("application/json")) {
+            const body = await request.json();
+            userAnswer = body.answer || "";
+            challengeId = body.challengeId || "";
+          } else if (contentType.includes("application/x-www-form-urlencoded") || contentType.includes("multipart/form-data")) {
+            const formData = await request.formData();
+            userAnswer = formData.get("captcha_answer") || "";
+            challengeId = formData.get("captcha_id") || "";
+          }
+        }
 
-    // Si es hub, renderizar hub.html (ignora remainingSegments)
+        if (userAnswer && challengeId) {
+          const parts = challengeId.split(".");
+          if (parts.length === 2) {
+            const [expectedSig, _] = parts;
+            let decoded = "";
+            try { decoded = atob(parts[1]); } catch {}
+            const [chalSlug, text] = decoded.split("|");
+            const expected = await hmacSign(link.captcha_secret, "challenge_" + chalSlug + "_" + text);
+            if (expected === expectedSig && chalSlug === matchedSlug && userAnswer.trim().toUpperCase() === text.toUpperCase()) {
+              const cookie = await makeCaptchaCookie(env, matchedSlug);
+              const headers = {
+                "Location": request.url,
+                "Content-Type": "text/html; charset=utf-8"
+              };
+              if (cookie) headers["Set-Cookie"] = cookie;
+              return new Response("", { status: 302, headers });
+            }
+          }
+        }
+
+        const htmlRes = await fetch(new URL("/gs/captcha.html", url.origin));
+        let html = await htmlRes.text();
+        html = html.replace(/{{slug}}/g, matchedSlug);
+        const hasError = (userAnswer && challengeId) ? 'true' : 'false';
+        html = html.replace(/{{hasError}}/g, hasError);
+        html = html.replace(/{{[a-z_]+}}/gi, '');
+        return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8" } });
+      }
+    }
+
+    recordAnalytics(context, env, matchedSlug, request, link.link_id);
+
     if (link.type === "group") {
       const hub = await env.DB.prepare("SELECT * FROM hub_configs WHERE slug = ?").bind(matchedSlug).first();
       const htmlRes = await fetch(new URL("/gs/hub.html", url.origin));
@@ -389,24 +599,20 @@ export async function onRequest(context) {
       html = html.replace(/{{linksHtml}}/g, linksHtml);
       html = html.replace(/{{lang}}/g, hub?.lang_mode !== 'auto' ? hub?.lang_mode : 'es');
       html = html.replace(/{{bioHtml}}/g, hub?.bio ? `<p class="bio">${hub.bio}</p>` : '');
+      html = html.replace(/{{[a-z_]+}}/gi, '');
       return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8" } });
     }
 
-    // Enlace directo: construir destino
     let target = link.target_url.replace(/\/+$/, "");
-
-    // Si tiene splat, concatenar el resto de segmentos
     if (link.splat && remainingSegments.length > 0) {
       target += "/" + remainingSegments.join("/");
     }
-
     if (url.search) {
       const cleanParams = new URLSearchParams(url.search);
       cleanParams.delete("pwd");
       const qs = cleanParams.toString();
       if (qs) target += (target.includes("?") ? "&" : "?") + qs;
     }
-
     return Response.redirect(target, 302);
 
   } catch (error) {

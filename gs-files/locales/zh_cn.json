@@ -105,5 +105,12 @@
   "empty_hubs": "暂无链接组，创建第一个 ✨",
   "empty_data": "暂无数据",
   "no_clicks": "无点击",
-  "max_chars": "最多 %d 字符"
+  "max_chars": "最多 %d 字符",
+  "lbl_captcha": "🧩 要求验证码",
+  "captcha_title": "安全验证",
+  "captcha_desc": "输入图片中的代码",
+  "captcha_placeholder": "·····",
+  "captcha_btn": "验证",
+  "captcha_error": "验证码错误",
+  "th_flow_ip": "IP"
 }

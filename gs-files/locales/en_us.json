@@ -105,5 +105,12 @@
   "empty_hubs": "No hubs yet. Create the first one ✨",
   "empty_data": "No data yet",
   "no_clicks": "No clicks",
-  "max_chars": "Max %d chars"
+  "max_chars": "Max %d chars",
+  "lbl_captcha": "🧩 Require captcha",
+  "captcha_title": "Security check",
+  "captcha_desc": "Type the code you see in the image",
+  "captcha_placeholder": "·····",
+  "captcha_btn": "Verify",
+  "captcha_error": "Incorrect code",
+  "th_flow_ip": "IP"
 }

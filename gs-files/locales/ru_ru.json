@@ -105,5 +105,12 @@
   "empty_hubs": "Групп пока нет. Создайте первую ✨",
   "empty_data": "Пока нет данных",
   "no_clicks": "Нет кликов",
-  "max_chars": "Макс. %d симв."
+  "max_chars": "Макс. %d симв.",
+  "lbl_captcha": "🧩 Требовать капчу",
+  "captcha_title": "Проверка безопасности",
+  "captcha_desc": "Введите код, который видите на картинке",
+  "captcha_placeholder": "·····",
+  "captcha_btn": "Проверить",
+  "captcha_error": "Неверный код",
+  "th_flow_ip": "IP"
 }

@@ -105,5 +105,12 @@
   "empty_hubs": "No hay conjuntos aún. Crea el primero ✨",
   "empty_data": "No hay datos aún",
   "no_clicks": "Sin clics",
-  "max_chars": "Máx. %d car."
+  "max_chars": "Máx. %d car.",
+  "lbl_captcha": "🧩 Requerir captcha",
+  "captcha_title": "Verificación de seguridad",
+  "captcha_desc": "Escribe el código que ves en la imagen",
+  "captcha_placeholder": "·····",
+  "captcha_btn": "Verificar",
+  "captcha_error": "Código incorrecto",
+  "th_flow_ip": "IP"
 }

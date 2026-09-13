@@ -20,6 +20,8 @@ It is built for people who want their own shortener without relying
 on third-party services, without paying subscriptions, and without
 worrying about servers. You only need a Cloudflare account, a domain
 (or the free Pages subdomain), and to follow the setup steps.
+I would recommend using DNSHE, l.cd or cc.cd are both great options 
+for deploying this repository. (non-promotion)
 
 <p align="center">
   <img src="https://github.com/quasvx/GreenShort/blob/main/gs-files/static/github/AnalyticsDashboardPreview.png?raw=true" alt="Analytics Dashboard Preview" width="850">

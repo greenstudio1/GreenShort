@@ -84,6 +84,9 @@ user.
 The entire dashboard uses a dark, minimal design with green
 accents, optimized for both desktop and mobile.
 
+**QR Generation**
+Generate QRs easily, with 3-5 clicks
+
 <p align="center">
   <img src="https://raw.githubusercontent.com/quasvx/GreenShort/main/gs-files/static/github/LinksDashboardPreview.png" alt="Links Dashboard Preview" width="850">
 </p>

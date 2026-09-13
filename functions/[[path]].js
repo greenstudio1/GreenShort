@@ -568,6 +568,21 @@ export async function onRequest(context) {
 
     if (link.type === "group") {
       const hub = await env.DB.prepare("SELECT * FROM hub_configs WHERE slug = ?").bind(matchedSlug).first();
+
+      if (hub && hub.mode === "custom_html" && hub.custom_html && hub.custom_html.trim() !== "") {
+        let custom = hub.custom_html;
+        custom = custom.replace(/{{slug}}/g, matchedSlug);
+        custom = custom.replace(/{{title}}/g, hub.title || matchedSlug);
+        custom = custom.replace(/{{bio}}/g, hub.bio || '');
+        custom = custom.replace(/{{origin}}/g, url.origin);
+        return new Response(custom, {
+          headers: {
+            "Content-Type": "text/html; charset=utf-8",
+            "Cache-Control": "no-store"
+          }
+        });
+      }
+
       const htmlRes = await fetch(new URL("/gs/hub.html", url.origin));
       let html = await htmlRes.text();
       let items = [];

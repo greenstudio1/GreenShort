@@ -16,6 +16,9 @@ export async function onRequest(context) {
     if (url.pathname === "/favicon.svg") {
       return new Response(SVG_FAVICON, { headers: { "Content-Type": "image/svg+xml" } });
     }
+    if (url.pathname === "/favicon.ico") {
+      return new Response(SVG_FAVICON, { headers: { "Content-Type": "image/svg+xml" } });
+    }
 
     if (prefix === "gs") return next();
     if (prefix === "gs-files") return next();

@@ -249,7 +249,7 @@ license terms.
 Source: github.com/quasvx/GreenShort
 
 
-Currently, we only support deploying to Cloudflare Pages.
+*Currently, we only support deploying to Cloudflare Pages.*
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/quasvx/GreenShort/refs/heads/main/gs-files/static/github/CloudflarePagesPreview.png" alt="Pages Preview" width="400">

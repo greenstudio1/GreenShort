@@ -13,10 +13,7 @@ export async function onRequest(context) {
     const MAX_EXPIRATION_DAYS = parseInt(env.MAX_EXPIRATION_DAYS) || 365;
     const MAX_EXPIRATION_MS = MAX_EXPIRATION_DAYS * 24 * 60 * 60 * 1000;
 
-    if (url.pathname === "/favicon.svg") {
-      return new Response(SVG_FAVICON, { headers: { "Content-Type": "image/svg+xml" } });
-    }
-    if (url.pathname === "/favicon.ico") {
+    if (url.pathname === "/favicon.svg" || url.pathname === "/favicon.ico") {
       return new Response(SVG_FAVICON, { headers: { "Content-Type": "image/svg+xml" } });
     }
 
@@ -268,22 +265,6 @@ export async function onRequest(context) {
         if (!targetUrl) return json({ error: "Falta la URL de destino" }, 400);
         try { new URL(targetUrl); } catch { return json({ error: "URL inválida" }, 400); }
 
-        const conflict = await env.DB.prepare(
-          "SELECT slug FROM links WHERE slug LIKE ? OR slug = ?"
-        ).bind(slug + "/%", slug).first();
-        if (conflict && conflict.slug !== slug) {
-          return json({ error: "Conflicto con una ruta existente: /" + conflict.slug }, 400);
-        }
-
-        const parts = slug.split("/");
-        for (let i = 1; i < parts.length; i++) {
-          const parentSlug = parts.slice(0, i).join("/");
-          const parent = await env.DB.prepare("SELECT slug, splat FROM links WHERE slug = ?").bind(parentSlug).first();
-          if (parent && parent.splat === 1) {
-            return json({ error: "Conflicto: /" + parentSlug + " ya captura esta ruta con splat activado" }, 400);
-          }
-        }
-
         const existing = await env.DB.prepare(
           "SELECT target_url, link_id, created_at_ms FROM links WHERE slug = ?"
         ).bind(slug).first();
@@ -332,22 +313,6 @@ export async function onRequest(context) {
         if (slug.length > MAX_SLUG_LENGTH) return json({ error: `Slug máximo ${MAX_SLUG_LENGTH} caracteres` }, 400);
         if (!validateSlugFormat(slug)) return json({ error: "Slug inválido" }, 400);
         if (isReservedSlug(slug)) return json({ error: "Ruta reservada" }, 400);
-
-        const conflict = await env.DB.prepare(
-          "SELECT slug FROM links WHERE slug LIKE ? OR slug = ?"
-        ).bind(slug + "/%", slug).first();
-        if (conflict && conflict.slug !== slug) {
-          return json({ error: "Conflicto con una ruta existente: /" + conflict.slug }, 400);
-        }
-
-        const parts = slug.split("/");
-        for (let i = 1; i < parts.length; i++) {
-          const parentSlug = parts.slice(0, i).join("/");
-          const parent = await env.DB.prepare("SELECT slug, splat FROM links WHERE slug = ?").bind(parentSlug).first();
-          if (parent && parent.splat === 1) {
-            return json({ error: "Conflicto: /" + parentSlug + " ya captura esta ruta con splat activado" }, 400);
-          }
-        }
 
         const existing = await env.DB.prepare(
           "SELECT link_id, created_at_ms FROM links WHERE slug = ?"
@@ -405,7 +370,7 @@ export async function onRequest(context) {
           const linkBySlug = {};
           for (const l of currentLinks) linkBySlug[l.slug] = l;
 
-          const query = `SELECT blob1 AS slug, blob2 AS country, blob3 AS user_agent, blob5 AS ip, blob6 AS link_id, timestamp FROM greenshort ORDER BY timestamp DESC LIMIT 1000`;
+          const query = `SELECT blob1 AS slug, blob2 AS country, blob3 AS user_agent, blob4 AS referrer, blob5 AS ip, blob6 AS link_id, timestamp FROM greenshort ORDER BY timestamp DESC LIMIT 1000`;
           const aeRes = await fetch(
             `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/analytics_engine/sql`,
             { method: "POST", headers: { "Authorization": `Bearer ${env.CF_API_TOKEN}` }, body: query }
@@ -425,44 +390,7 @@ export async function onRequest(context) {
             })
             .slice(0, 150)
             .map(r => ({
-              slug: r.slug, country: r.country, user_agent: r.user_agent, ip: r.ip, created_at: r.timestamp
-            }));
-          return json(rows);
-        } catch (e) {
-          return json({ error: "Fallo: " + (e.message || "Error") }, 500);
-        }
-      }
-
-      if (action === "flow" && request.method === "GET") {
-        if (!env.ANALYTICS) return json({ error: "Analytics Engine binding 'ANALYTICS' no configurado" }, 400);
-        if (!env.CF_ACCOUNT_ID || !env.CF_API_TOKEN) return json({ error: "Variables CF_ACCOUNT_ID y CF_API_TOKEN requeridas" }, 400);
-        const limit = parseInt(url.searchParams.get("limit")) || 100;
-        try {
-          const { results: currentLinks } = await env.DB.prepare("SELECT slug, link_id, created_at_ms FROM links").all();
-          const linkBySlug = {};
-          for (const l of currentLinks) linkBySlug[l.slug] = l;
-
-          const query = `SELECT blob1 AS slug, blob2 AS country, blob3 AS user_agent, blob4 AS referrer, blob5 AS ip, blob6 AS link_id, timestamp FROM greenshort ORDER BY timestamp DESC LIMIT ${limit * 5}`;
-          const aeRes = await fetch(
-            `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/analytics_engine/sql`,
-            { method: "POST", headers: { "Authorization": `Bearer ${env.CF_API_TOKEN}` }, body: query }
-          );
-          const aeData = await aeRes.json();
-          if (!aeRes.ok) return json({ error: aeData.errors?.[0]?.message || "Error" }, 500);
-          const rows = (aeData.data || [])
-            .filter(r => {
-              const link = linkBySlug[r.slug];
-              if (!link) return false;
-              if (link.link_id && r.link_id && r.link_id !== link.link_id) return false;
-              if (link.created_at_ms) {
-                const eventTs = new Date(r.timestamp).getTime();
-                if (!isNaN(eventTs) && eventTs < link.created_at_ms) return false;
-              }
-              return true;
-            })
-            .slice(0, limit)
-            .map(r => ({
-              slug: r.slug, country: r.country, user_agent: r.user_agent, referrer: r.referrer, ip: r.ip, timestamp: r.timestamp
+              slug: r.slug, country: r.country, user_agent: r.user_agent, referrer: r.referrer, ip: r.ip, created_at: r.timestamp
             }));
           return json(rows);
         } catch (e) {

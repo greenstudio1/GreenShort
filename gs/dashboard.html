@@ -1093,25 +1093,25 @@
   </div>
 
   <div id="authView" class="card">
-  <div class="card-header"><div class="card-title">🔐 <span data-i18n="auth_title">Acceso con Site Token</span></div></div>
-  <input type="password" id="siteToken" placeholder="SITE_TOKEN" data-i18n-placeholder="placeholder_token" autocomplete="off" spellcheck="false">
-  <div id="authError" class="error-text" style="display:none;"></div>
-  <div class="row-btn"><button class="btn-main" style="width:100%;" data-i18n="auth_btn" onclick="authLogin()">Acceder</button></div>
-  <div class="login-info">
-    <h3>ℹ️ Information</h3>
-    <p>GreenShort is a self-hosted URL shortener running entirely on Cloudflare.</p>
-    <ul>
-      <li>Enter your <code>SITE_TOKEN</code> configured in Cloudflare Pages environment variables.</li>
-      <li>Minimum 8 characters required.</li>
-      <li>All API requests use <code>Authorization: Bearer &lt;token&gt;</code>.</li>
-    </ul>
-    <p style="margin-top:12px;">Source: <a href="https://github.com/quasvx/GreenShort" target="_blank" rel="noopener">github.com/quasvx/GreenShort</a></p>
+    <div class="card-header"><div class="card-title">🔐 <span data-i18n="auth_title">Acceso con Site Token</span></div></div>
+    <input type="password" id="siteToken" placeholder="SITE_TOKEN" data-i18n-placeholder="placeholder_token" autocomplete="off" spellcheck="false">
+    <div id="authError" class="error-text" style="display:none;"></div>
+    <div class="row-btn"><button class="btn-main" style="width:100%;" data-i18n="auth_btn" onclick="authLogin()">Acceder</button></div>
+    <div class="login-info">
+      <h3>ℹ️ Information</h3>
+      <p>GreenShort is a self-hosted URL shortener running entirely on Cloudflare.</p>
+      <ul>
+        <li>Enter your <code>SITE_TOKEN</code> configured in Cloudflare Pages environment variables.</li>
+        <li>Minimum 8 characters required.</li>
+        <li>All API requests use <code>Authorization: Bearer &lt;token&gt;</code>.</li>
+      </ul>
+      <p style="margin-top:12px;">Source: <a href="https://github.com/quasvx/GreenShort" target="_blank" rel="noopener">github.com/quasvx/GreenShort</a></p>
+    </div>
+    <div style="display:flex;justify-content:center;align-items:center;gap:16px;margin-top:20px;flex-wrap:wrap;">
+      <img src="/gs-files/static/TqwfdhrUPXPqySrcPMTe.png" alt="Cloudflare" style="max-width:400px;width:100%;height:auto;border-radius:12px;">
+      <img src="/gs-files/static/pbhnwQeqXwmSkfCcThCz.png" alt="JavaScript" style="max-width:400px;width:100%;height:auto;border-radius:12px;">
+    </div>
   </div>
-  <div style="display:flex;justify-content:center;align-items:center;gap:16px;margin-top:20px;flex-wrap:wrap;">
-    <img src="/gs-files/static/TqwfdhrUPXPqySrcPMTe.png" alt="Cloudflare" style="max-width:390px;width:100%;height:auto;border-radius:12px;">
-    <img src="/gs-files/static/pbhnwQeqXwmSkfCcThCz.png" alt="JavaScript" style="max-width:390px;width:100%;height:auto;border-radius:12px;">
-  </div>
-</div>
 
   <div id="dashView" style="display:none;">
     <div class="nav">
@@ -1862,7 +1862,7 @@
     var t = currentDict || {};
     var btn = document.getElementById('btnSaveLink');
     var slug = document.getElementById('slugInput').value.toLowerCase();
-    slug = slug.replace(/[^a-z0-9_\/-]/g, '').replace(/^\/+/, '').replace(/\/+/g, '/').replace(/\/+$/, '');
+    slug = slug.replace(/[^a-z0-9_\/.-]/g, '').replace(/^\/+/, '').replace(/\/+/g, '/').replace(/\/+$/, '');
     document.getElementById('slugInput').value = slug;
     var targetUrl = document.getElementById('targetUrl').value.trim();
     var splat = document.getElementById('splat').checked;
@@ -1878,7 +1878,7 @@
       if (!targetUrl) { errorEl.textContent = t.msg_error_url_required || '❌ URL requerida'; errorEl.style.display = 'block'; return; }
       try { new URL(targetUrl); } catch(e) { errorEl.textContent = t.msg_error_url_invalid || '❌ URL inválida'; errorEl.style.display = 'block'; return; }
       if (!slug) { errorEl.textContent = t.msg_error_slug_required || '❌ Slug requerido'; errorEl.style.display = 'block'; return; }
-      if (!/^[a-z0-9_\/-]+$/.test(slug) || slug.startsWith('/') || slug.endsWith('/') || slug.includes('//')) {
+      if (!/^[a-z0-9_\/.-]+$/.test(slug) || slug.startsWith('/') || slug.endsWith('/') || slug.includes('//') || slug.startsWith('.') || slug.endsWith('.') || slug.includes('..')) {
         errorEl.textContent = t.msg_error_slug_format || '❌ Formato inválido';
         errorEl.style.display = 'block';
         return;
@@ -1915,7 +1915,7 @@
     var t = currentDict || {};
     var btn = document.getElementById('btnSaveHub');
     var slug = document.getElementById('hubSlug').value.toLowerCase();
-    slug = slug.replace(/[^a-z0-9_\/-]/g, '').replace(/^\/+/, '').replace(/\/+/g, '/').replace(/\/+$/, '');
+    slug = slug.replace(/[^a-z0-9_\/.-]/g, '').replace(/^\/+/, '').replace(/\/+/g, '/').replace(/\/+$/, '');
     document.getElementById('hubSlug').value = slug;
     var mode = document.getElementById('hubMode').value;
     var title = document.getElementById('hubTitle').value.trim();
@@ -1931,7 +1931,7 @@
     btn.disabled = true;
     try {
       if (!slug) { errorEl.textContent = t.msg_error_slug_required || '❌ Slug requerido'; errorEl.style.display = 'block'; return; }
-      if (!/^[a-z0-9_\/-]+$/.test(slug) || slug.startsWith('/') || slug.endsWith('/') || slug.includes('//')) {
+      if (!/^[a-z0-9_\/.-]+$/.test(slug) || slug.startsWith('/') || slug.endsWith('/') || slug.includes('//') || slug.startsWith('.') || slug.endsWith('.') || slug.includes('..')) {
         errorEl.textContent = t.msg_error_slug_format || '❌ Formato inválido'; errorEl.style.display = 'block'; return;
       }
       if (isReservedSlugClient(slug.split('/')[0])) {

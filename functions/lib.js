@@ -136,10 +136,13 @@ export function genLinkId() {
 
 export function validateSlugFormat(slug) {
   if (!slug) return false;
-  if (!/^[a-z0-9_\/-]+$/.test(slug)) return false;
+  if (!/^[a-z0-9_\/-]+$/.test(slug.replace(/\./g, ""))) return false;
   if (slug.startsWith("/") || slug.endsWith("/")) return false;
   if (slug.includes("//")) return false;
   if (slug.split("/").some(s => s.length === 0)) return false;
+  if (slug.startsWith(".") || slug.endsWith(".")) return false;
+  if (slug.includes("..")) return false;
+  if (slug.split("/").some(s => s.startsWith(".") || s.endsWith("."))) return false;
   return true;
 }
 

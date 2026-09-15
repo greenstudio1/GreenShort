@@ -3,7 +3,7 @@
 Self-hosted URL shortener that runs entirely on Cloudflare.
 No servers, no external databases, no dependencies.
 Everything lives inside your Cloudflare account using Pages, D1,
-Workers AI, Analytics Engine, and optionally KV.
+Workers AI and Analytics Engine.
 
 
 ---

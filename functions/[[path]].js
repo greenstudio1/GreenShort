@@ -426,70 +426,79 @@ export async function onRequest(context) {
       return new Response("Este enlace ha expirado.", { status: 410 });
     }
 
-    if (link.password) {
-      let userPass = "";
-      if (request.method === "POST") {
-        const contentType = request.headers.get("Content-Type") || "";
-        if (contentType.includes("application/x-www-form-urlencoded") || contentType.includes("multipart/form-data")) {
-          const formData = await request.formData();
-          userPass = formData.get("password") || "";
-        }
-      } else {
-        userPass = url.searchParams.get("pwd") || "";
-      }
-      if (userPass !== link.password) {
-        const htmlRes = await fetch(new URL("/gs/password.html", url.origin));
-        let html = await htmlRes.text();
-        html = html.replace(/{{slug}}/g, matchedSlug);
-        html = html.replace(/{{hasError}}/g, userPass ? 'true' : 'false');
-        html = html.replace(/{{[a-z_]+}}/gi, '');
-        return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8" } });
+    let postPassword = "";
+    let postCaptchaAnswer = "";
+    let postCaptchaId = "";
+    let hasPost = false;
+
+    if (request.method === "POST") {
+      const contentType = request.headers.get("Content-Type") || "";
+      if (contentType.includes("application/x-www-form-urlencoded") || contentType.includes("multipart/form-data")) {
+        hasPost = true;
+        const formData = await request.formData();
+        postPassword = formData.get("password") || "";
+        postCaptchaAnswer = formData.get("captcha_answer") || "";
+        postCaptchaId = formData.get("captcha_id") || "";
       }
     }
 
+    let captchaSolved = false;
     if (link.captcha && link.captcha_secret) {
-      const isOk = await verifyCaptchaCookie(request, env, matchedSlug);
-      if (!isOk) {
-        let userAnswer = "";
-        let challengeId = "";
-        if (request.method === "POST") {
-          const contentType = request.headers.get("Content-Type") || "";
-          if (contentType.includes("application/json")) {
-            const body = await request.json();
-            userAnswer = body.answer || "";
-            challengeId = body.challengeId || "";
-          } else if (contentType.includes("application/x-www-form-urlencoded") || contentType.includes("multipart/form-data")) {
-            const formData = await request.formData();
-            userAnswer = formData.get("captcha_answer") || "";
-            challengeId = formData.get("captcha_id") || "";
+      captchaSolved = await verifyCaptchaCookie(request, env, matchedSlug);
+      if (!captchaSolved && hasPost && postCaptchaAnswer && postCaptchaId) {
+        const parts = postCaptchaId.split(".");
+        if (parts.length === 2) {
+          const [expectedSig] = parts;
+          let decoded = "";
+          try { decoded = atob(parts[1]); } catch {}
+          const [chalSlug, text] = decoded.split("|");
+          const expected = await hmacSign(link.captcha_secret, "challenge_" + chalSlug + "_" + text);
+          if (expected === expectedSig && chalSlug === matchedSlug && postCaptchaAnswer.trim().toUpperCase() === text.toUpperCase()) {
+            const cookie = await makeCaptchaCookie(env, matchedSlug);
+            const headers = {
+              "Location": request.url,
+              "Content-Type": "text/html; charset=utf-8"
+            };
+            if (cookie) headers["Set-Cookie"] = cookie;
+            return new Response("", { status: 302, headers });
           }
         }
+      }
+    }
 
-        if (userAnswer && challengeId) {
-          const parts = challengeId.split(".");
-          if (parts.length === 2) {
-            const [expectedSig, _] = parts;
-            let decoded = "";
-            try { decoded = atob(parts[1]); } catch {}
-            const [chalSlug, text] = decoded.split("|");
-            const expected = await hmacSign(link.captcha_secret, "challenge_" + chalSlug + "_" + text);
-            if (expected === expectedSig && chalSlug === matchedSlug && userAnswer.trim().toUpperCase() === text.toUpperCase()) {
-              const cookie = await makeCaptchaCookie(env, matchedSlug);
-              const headers = {
-                "Location": request.url,
-                "Content-Type": "text/html; charset=utf-8"
-              };
-              if (cookie) headers["Set-Cookie"] = cookie;
-              return new Response("", { status: 302, headers });
-            }
-          }
-        }
+    let passSolved = false;
+    if (link.password) {
+      if (hasPost) {
+        passSolved = postPassword === link.password;
+      } else {
+        passSolved = (url.searchParams.get("pwd") || "") === link.password;
+      }
+    }
 
-        const htmlRes = await fetch(new URL("/gs/captcha.html", url.origin));
+    if (link.password && link.captcha && link.captcha_secret) {
+      if (!passSolved || !captchaSolved) {
+        const htmlRes = await fetch(new URL("/gs-files/html/set/password-captcha.html", url.origin));
         let html = await htmlRes.text();
         html = html.replace(/{{slug}}/g, matchedSlug);
-        const hasError = (userAnswer && challengeId) ? 'true' : 'false';
-        html = html.replace(/{{hasError}}/g, hasError);
+        html = html.replace(/{{hasError}}/g, hasPost ? 'true' : 'false');
+        html = html.replace(/{{[a-z_]+}}/gi, '');
+        return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8" } });
+      }
+    } else if (link.password) {
+      if (!passSolved) {
+        const htmlRes = await fetch(new URL("/gs-files/html/set/password.html", url.origin));
+        let html = await htmlRes.text();
+        html = html.replace(/{{slug}}/g, matchedSlug);
+        html = html.replace(/{{hasError}}/g, hasPost ? 'true' : 'false');
+        html = html.replace(/{{[a-z_]+}}/gi, '');
+        return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8" } });
+      }
+    } else if (link.captcha && link.captcha_secret) {
+      if (!captchaSolved) {
+        const htmlRes = await fetch(new URL("/gs-files/html/set/captcha.html", url.origin));
+        let html = await htmlRes.text();
+        html = html.replace(/{{slug}}/g, matchedSlug);
+        html = html.replace(/{{hasError}}/g, hasPost ? 'true' : 'false');
         html = html.replace(/{{[a-z_]+}}/gi, '');
         return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8" } });
       }
@@ -514,7 +523,7 @@ export async function onRequest(context) {
         });
       }
 
-      const htmlRes = await fetch(new URL("/gs/hub.html", url.origin));
+      const htmlRes = await fetch(new URL("/gs-files/html/set/hub.html", url.origin));
       let html = await htmlRes.text();
       let items = [];
       try { items = JSON.parse(hub?.items_json || "[]"); } catch {}

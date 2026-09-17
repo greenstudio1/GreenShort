@@ -182,7 +182,7 @@ export async function makeCaptchaCookie(env, slug) {
   if (!link || !link.captcha_secret) return null;
   const value = await hmacSign(link.captcha_secret, "captcha_ok_" + slug);
   const cookieName = "gs_captcha_" + slug.replace(/[^a-z0-9_]/gi, "_");
-  return cookieName + "=" + value + "; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=86400";
+  return cookieName + "=" + value + "; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=86400";
 }
 
 export function recordAnalytics(ctx, env, slug, req, linkId) {

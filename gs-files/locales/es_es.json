@@ -120,5 +120,7 @@
   "pc_title": "Acceso protegido",
   "pc_desc": "Este enlace requiere contraseña y verificación.",
   "pc_btn": "Entrar",
-  "pc_error": "Contraseña o verificación incorrectas"
+  "pc_error": "Contraseña o verificación incorrectas",
+  "pc_lbl_pwd": "Contraseña",
+  "pc_lbl_captcha": "Verificación"
 }

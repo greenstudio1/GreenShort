@@ -116,5 +116,9 @@
   "btn_copy": "複製",
   "btn_qr": "二維碼",
   "btn_edit": "編輯",
-  "btn_delete": "刪除"
+  "btn_delete": "刪除",
+  "pc_title": "受保護的存取",
+  "pc_desc": "此連結需要密碼和驗證。",
+  "pc_btn": "進入",
+  "pc_error": "密碼或驗證錯誤"
 }

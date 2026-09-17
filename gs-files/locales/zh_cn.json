@@ -116,5 +116,9 @@
   "btn_copy": "复制",
   "btn_qr": "二维码",
   "btn_edit": "编辑",
-  "btn_delete": "删除"
+  "btn_delete": "删除",
+  "pc_title": "受保护的访问",
+  "pc_desc": "此链接需要密码和验证。",
+  "pc_btn": "进入",
+  "pc_error": "密码或验证错误"
 }

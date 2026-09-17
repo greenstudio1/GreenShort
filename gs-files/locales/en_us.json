@@ -116,5 +116,9 @@
   "btn_copy": "Copy",
   "btn_qr": "QR",
   "btn_edit": "Edit",
-  "btn_delete": "Delete"
+  "btn_delete": "Delete",
+  "pc_title": "Protected access",
+  "pc_desc": "This link requires a password and verification.",
+  "pc_btn": "Enter",
+  "pc_error": "Incorrect password or verification"
 }

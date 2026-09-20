@@ -6,41 +6,153 @@
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <title>{{title}}</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { 
-      background: {{bgStyle}}; 
-      color: {{textColor}}; 
-      display: flex; 
-      flex-direction: column; 
-      align-items: center; 
-      padding: 40px 16px; 
-      min-height: 100vh; 
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+    body {
+      background: {{bgStyle}};
+      color: {{textColor}};
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 16px;
+      min-height: 100vh;
+      animation: pageEnter 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes pageEnter {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
     }
     .hub-wrap { width: 100%; max-width: 440px; text-align: center; }
-    .hub-avatar { width: 64px; height: 64px; border-radius: 50%; background: {{btnColor}}; color: {{btnTextColor}}; display: inline-flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 800; margin-bottom: 16px; }
-    h1 { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
-    p.bio { font-size: 14px; opacity: 0.75; margin-bottom: 24px; }
-    .hub-btn { 
-      display: flex; 
-      justify-content: space-between; 
-      align-items: center; 
-      background: {{cardBg}}; 
-      border: 1px solid {{borderColor}}; 
-      padding: 14px 18px; 
-      border-radius: {{btnRadius}}; 
-      color: {{textColor}}; 
-      text-decoration: none; 
-      font-weight: 600; 
-      font-size: 14px; 
-      margin-bottom: 12px; 
-      transition: transform 0.15s ease; 
+    .hub-avatar {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: {{btnColor}};
+      color: {{btnTextColor}};
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      font-weight: 800;
+      margin-bottom: 16px;
+      animation: avatarEnter 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+      overflow: hidden;
     }
-    .hub-btn:active { transform: scale(0.98); }
+    .hub-avatar img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+      display: block;
+    }
+    @keyframes avatarEnter {
+      from { opacity: 0; transform: scale(0.7); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    h1 {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      animation: fadeSlide 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
+    }
+    p.bio {
+      font-size: 14px;
+      opacity: 0.75;
+      margin-bottom: 24px;
+      animation: fadeSlide 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both;
+    }
+    @keyframes fadeSlide {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .hub-btn {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: {{cardBg}};
+      border: 1px solid {{borderColor}};
+      padding: 14px 18px;
+      border-radius: {{btnRadius}};
+      color: {{textColor}};
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 12px;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+                  box-shadow 0.25s ease,
+                  border-color 0.25s ease,
+                  background 0.25s ease;
+      animation: btnEnter 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+      will-change: transform;
+    }
+    .hub-btn::before {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%;
+      width: 100%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+      transition: left 0.6s ease;
+      pointer-events: none;
+    }
+    .hub-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+      border-color: {{btnColor}};
+    }
+    .hub-btn:hover::before {
+      left: 100%;
+    }
+    .hub-btn:active {
+      transform: translateY(-1px) scale(0.985);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    }
+    .hub-btn:focus-visible {
+      outline: none;
+      border-color: {{btnColor}};
+      box-shadow: 0 0 0 3px {{btnColor}}33, 0 8px 20px rgba(0,0,0,0.18);
+    }
+    .hub-btn span:first-child {
+      text-align: left;
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .hub-btn span:last-child {
+      margin-left: 12px;
+      opacity: 0.6;
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+      flex-shrink: 0;
+    }
+    .hub-btn:hover span:last-child {
+      opacity: 1;
+      transform: translateX(4px);
+    }
+    .hub-btn:nth-child(1) { animation-delay: 0.20s; }
+    .hub-btn:nth-child(2) { animation-delay: 0.26s; }
+    .hub-btn:nth-child(3) { animation-delay: 0.32s; }
+    .hub-btn:nth-child(4) { animation-delay: 0.38s; }
+    .hub-btn:nth-child(5) { animation-delay: 0.44s; }
+    .hub-btn:nth-child(6) { animation-delay: 0.50s; }
+    .hub-btn:nth-child(7) { animation-delay: 0.56s; }
+    .hub-btn:nth-child(8) { animation-delay: 0.62s; }
+    .hub-btn:nth-child(9) { animation-delay: 0.68s; }
+    .hub-btn:nth-child(10) { animation-delay: 0.74s; }
+    @keyframes btnEnter {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      * { animation: none !important; transition: none !important; }
+    }
   </style>
 </head>
 <body>
   <div class="hub-wrap">
-    <div class="hub-avatar">GS</div>
+    <div class="hub-avatar">{{avatarHtml}}</div>
     <h1>{{title}}</h1>
     {{bioHtml}}
     <div>{{linksHtml}}</div>

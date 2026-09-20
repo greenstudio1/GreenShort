@@ -134,7 +134,7 @@ export async function onRequest(context) {
         const body = await request.json();
         const id = (body.id || "").trim();
         if (!id) return json({ error: "ID requerido" }, 400);
-        const subs = await env.DB.prepare("SELECT id FROM folders WHERE parent_id = ?").all();
+        const subs = await env.DB.prepare("SELECT id FROM folders WHERE parent_id = ?").bind(id).all();
         const subIds = (subs.results || []).map(r => r.id);
         const allIds = [id, ...subIds];
         const statements = [

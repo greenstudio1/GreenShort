@@ -7,7 +7,8 @@ export const RESERVED_SLUGS = new Set([
   "sitemap.xml",
   "gs",
   "gs-files",
-  "api"
+  "api",
+  "lib"
 ]);
 
 export function isReservedSlug(slug) {

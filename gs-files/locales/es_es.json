@@ -123,5 +123,22 @@
   "pc_error": "Contraseña o verificación incorrectas",
   "pc_lbl_pwd": "Contraseña",
   "pc_lbl_captcha": "Verificación",
-  "lbl_hub_avatar": "Foto de perfil"
+  "lbl_hub_avatar": "Foto de perfil",
+  "tab_folders": "Carpetas",
+  "folder_all": "Todos",
+  "folder_unassigned": "Sin asignar",
+  "folder_new": "Nueva carpeta",
+  "folder_new_sub": "Nueva subcarpeta",
+  "folder_name": "Nombre de la carpeta",
+  "folder_rename": "Renombrar",
+  "folder_delete": "Borrar",
+  "folder_empty": "Esta carpeta está vacía",
+  "folder_items": "items",
+  "folder_confirm_delete": "¿Borrar la carpeta? Sus items pasarán a Sin asignar.",
+  "folder_no_folders": "No hay carpetas todavía",
+  "folder_filter": "Carpeta",
+  "folder_created": "Carpeta creada",
+  "folder_renamed": "Carpeta renombrada",
+  "folder_deleted": "Carpeta borrada",
+  "folder_moved": "Items movidos"
 }

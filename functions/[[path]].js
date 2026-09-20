@@ -166,7 +166,7 @@ export async function onRequest(context) {
         const hubSlug = url.searchParams.get("slug");
         const config = await env.DB.prepare(`
           SELECT h.slug, h.mode, h.title, h.bio, h.theme_palette, h.btn_style,
-                 h.bg_type, h.bg_val, h.custom_html, h.lang_mode, h.items_json,
+                 h.bg_type, h.bg_val, h.custom_html, h.lang_mode, h.items_json, h.avatar_url,
                  l.password, l.captcha
           FROM hub_configs h
           LEFT JOIN links l ON l.slug = h.slug
@@ -307,7 +307,7 @@ export async function onRequest(context) {
 
       if (action === "save-hub" && request.method === "POST") {
         const body = await request.json();
-        let { slug, mode, title, bio, theme_palette, btn_style, bg_type, bg_val, custom_html, lang_mode, items, password, captcha } = body;
+        let { slug, mode, title, bio, theme_palette, btn_style, bg_type, bg_val, custom_html, lang_mode, items, password, captcha, avatar_url } = body;
         slug = (slug || "").trim().toLowerCase().replace(/^\/+|\/+$/g, "").replace(/\/+/g, "/");
         if (!slug) return json({ error: "Slug requerido" }, 400);
         if (slug.length > MAX_SLUG_LENGTH) return json({ error: `Slug máximo ${MAX_SLUG_LENGTH} caracteres` }, 400);
@@ -340,10 +340,11 @@ export async function onRequest(context) {
               link_id=excluded.link_id,
               created_at_ms=excluded.created_at_ms
           `).bind(slug, password?.trim() || null, captchaFlag, captchaSecret, finalLinkId, finalCreatedAtMs),
-          env.DB.prepare(`INSERT INTO hub_configs (slug, mode, title, bio, theme_palette, btn_style, bg_type, bg_val, custom_html, lang_mode, items_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(slug) DO UPDATE SET mode=excluded.mode, title=excluded.title, bio=excluded.bio, theme_palette=excluded.theme_palette, btn_style=excluded.btn_style, bg_type=excluded.bg_type, bg_val=excluded.bg_val, custom_html=excluded.custom_html, lang_mode=excluded.lang_mode, items_json=excluded.items_json`).bind(
+          env.DB.prepare(`INSERT INTO hub_configs (slug, mode, title, bio, theme_palette, btn_style, bg_type, bg_val, custom_html, lang_mode, items_json, avatar_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(slug) DO UPDATE SET mode=excluded.mode, title=excluded.title, bio=excluded.bio, theme_palette=excluded.theme_palette, btn_style=excluded.btn_style, bg_type=excluded.bg_type, bg_val=excluded.bg_val, custom_html=excluded.custom_html, lang_mode=excluded.lang_mode, items_json=excluded.items_json, avatar_url=excluded.avatar_url`).bind(
             slug, mode || "builder", title || slug, bio || "", theme_palette || "emerald",
             btn_style || "rounded", bg_type || "palette", bg_val || "",
-            custom_html || "", lang_mode || "auto", JSON.stringify(items || [])
+            custom_html || "", lang_mode || "auto", JSON.stringify(items || []),
+            avatar_url || null
           )
         ]);
         return json({ success: true, slug, link_id: finalLinkId });
@@ -459,7 +460,6 @@ export async function onRequest(context) {
     let captchaSolved = false;
     if (link.captcha && link.captcha_secret) {
       if (hasPost && postCaptchaAnswer && postCaptchaId) {
-        // Si hay POST, validar SIEMPRE el texto (no confiar en cookie)
         const parts = postCaptchaId.split(".");
         if (parts.length === 2) {
           const [expectedSig] = parts;
@@ -470,12 +470,10 @@ export async function onRequest(context) {
           if (expected === expectedSig && chalSlug === matchedSlug && postCaptchaAnswer.trim().toUpperCase() === text.toUpperCase()) {
             const cookie = await makeCaptchaCookie(env, matchedSlug);
 
-            // Si también hay password y no está resuelta, NO redirigir todavía
             const passOkHere = !link.password || (postPassword === link.password);
             if (!passOkHere) {
               // fall through: se mostrará password-captcha con error
             } else {
-              // Redirigir directo al destino, sin segundo request
               recordAnalytics(context, env, matchedSlug, request, link.link_id);
               const headers = {
                 "Location": buildTarget(),
@@ -487,7 +485,6 @@ export async function onRequest(context) {
           }
         }
       } else {
-        // Sin POST: confiar en cookie
         captchaSolved = await verifyCaptchaCookie(request, env, matchedSlug);
       }
     }
@@ -568,8 +565,16 @@ export async function onRequest(context) {
         const href = it.is_gs ? `${url.origin}/${it.url}` : it.url;
         return `<a href="${href}" target="_blank" rel="noopener noreferrer" class="hub-btn"><span>${it.title}</span><span>&rarr;</span></a>`;
       }).join("");
+
+      let avatarHtml = "GS";
+      if (hub?.avatar_url && hub.avatar_url.trim() !== "") {
+        const safeUrl = hub.avatar_url.replace(/"/g, "&quot;");
+        avatarHtml = `<img src="${safeUrl}" alt="">`;
+      }
+
       html = html.replace(/{{slug}}/g, matchedSlug);
       html = html.replace(/{{title}}/g, hub?.title || matchedSlug);
+      html = html.replace(/{{avatarHtml}}/g, avatarHtml);
       html = html.replace(/{{bgStyle}}/g, bgStyle);
       html = html.replace(/{{textColor}}/g, pal.text);
       html = html.replace(/{{btnColor}}/g, pal.btn);

@@ -123,5 +123,22 @@
   "pc_error": "Incorrect password or verification",
   "pc_lbl_pwd": "Password",
   "pc_lbl_captcha": "Verification",
-  "lbl_hub_avatar": "Profile photo"
+  "lbl_hub_avatar": "Profile photo",
+  "tab_folders": "Folders",
+  "folder_all": "All",
+  "folder_unassigned": "Unassigned",
+  "folder_new": "New folder",
+  "folder_new_sub": "New subfolder",
+  "folder_name": "Folder name",
+  "folder_rename": "Rename",
+  "folder_delete": "Delete",
+  "folder_empty": "This folder is empty",
+  "folder_items": "items",
+  "folder_confirm_delete": "Delete this folder? Its items will move to Unassigned.",
+  "folder_no_folders": "No folders yet",
+  "folder_filter": "Folder",
+  "folder_created": "Folder created",
+  "folder_renamed": "Folder renamed",
+  "folder_deleted": "Folder deleted",
+  "folder_moved": "Items moved"
 }

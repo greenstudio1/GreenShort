@@ -426,6 +426,20 @@ export async function onRequest(context) {
       return new Response("Este enlace ha expirado.", { status: 410 });
     }
 
+    function buildTarget() {
+      let target = link.target_url.replace(/\/+$/, "");
+      if (link.splat && remainingSegments.length > 0) {
+        target += "/" + remainingSegments.join("/");
+      }
+      if (url.search) {
+        const cleanParams = new URLSearchParams(url.search);
+        cleanParams.delete("pwd");
+        const qs = cleanParams.toString();
+        if (qs) target += (target.includes("?") ? "&" : "?") + qs;
+      }
+      return target;
+    }
+
     let postPassword = "";
     let postCaptchaAnswer = "";
     let postCaptchaId = "";
@@ -444,8 +458,8 @@ export async function onRequest(context) {
 
     let captchaSolved = false;
     if (link.captcha && link.captcha_secret) {
-      captchaSolved = await verifyCaptchaCookie(request, env, matchedSlug);
-      if (!captchaSolved && hasPost && postCaptchaAnswer && postCaptchaId) {
+      if (hasPost && postCaptchaAnswer && postCaptchaId) {
+        // Si hay POST, validar SIEMPRE el texto (no confiar en cookie)
         const parts = postCaptchaId.split(".");
         if (parts.length === 2) {
           const [expectedSig] = parts;
@@ -455,14 +469,26 @@ export async function onRequest(context) {
           const expected = await hmacSign(link.captcha_secret, "challenge_" + chalSlug + "_" + text);
           if (expected === expectedSig && chalSlug === matchedSlug && postCaptchaAnswer.trim().toUpperCase() === text.toUpperCase()) {
             const cookie = await makeCaptchaCookie(env, matchedSlug);
-            const headers = {
-              "Location": request.url,
-              "Content-Type": "text/html; charset=utf-8"
-            };
-            if (cookie) headers["Set-Cookie"] = cookie;
-            return new Response("", { status: 302, headers });
+
+            // Si también hay password y no está resuelta, NO redirigir todavía
+            const passOkHere = !link.password || (postPassword === link.password);
+            if (!passOkHere) {
+              // fall through: se mostrará password-captcha con error
+            } else {
+              // Redirigir directo al destino, sin segundo request
+              recordAnalytics(context, env, matchedSlug, request, link.link_id);
+              const headers = {
+                "Location": buildTarget(),
+                "Content-Type": "text/html; charset=utf-8"
+              };
+              if (cookie) headers["Set-Cookie"] = cookie;
+              return new Response("", { status: 302, headers });
+            }
           }
         }
+      } else {
+        // Sin POST: confiar en cookie
+        captchaSolved = await verifyCaptchaCookie(request, env, matchedSlug);
       }
     }
 
@@ -558,17 +584,7 @@ export async function onRequest(context) {
       return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8" } });
     }
 
-    let target = link.target_url.replace(/\/+$/, "");
-    if (link.splat && remainingSegments.length > 0) {
-      target += "/" + remainingSegments.join("/");
-    }
-    if (url.search) {
-      const cleanParams = new URLSearchParams(url.search);
-      cleanParams.delete("pwd");
-      const qs = cleanParams.toString();
-      if (qs) target += (target.includes("?") ? "&" : "?") + qs;
-    }
-    return Response.redirect(target, 302);
+    return Response.redirect(buildTarget(), 302);
 
   } catch (error) {
     console.error('Error en Worker:', error);

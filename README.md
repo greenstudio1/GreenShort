@@ -43,6 +43,13 @@ Design link-in-bio style pages with multiple buttons, title, bio,
 custom profile picture, and color palette. Perfect for Instagram,
 TikTok, or any profile where you want to group several destinations.
 
+**Folders**
+Organize your links and hubs with folders and subfolders, up to
+two levels deep. Move items between folders in bulk, filter by
+folder in the links and hubs views, and jump directly to a folder
+with a deep link like `?group-promotions`. Everything stays private
+in the dashboard.
+
 **Profile picture in hubs**
 Every hub can show a custom avatar instead of the default "GS"
 badge. Paste an external URL or upload a local image (up to 500 KB)
@@ -99,10 +106,21 @@ error correction level, and the icon shown in the center. Upload
 a custom favicon or use the default one, then download as PNG or
 copy the image to your clipboard.
 
+**Live hub preview**
+While editing a hub, a live preview panel shows exactly how it
+will look. It updates as you type, without saving. Works for both
+the visual builder and custom HTML modes.
+
 **Storage usage indicator**
 The header shows how much of your D1 database is used, in real
 time, with a selectable unit (Auto, B, KB, MB, GB, TB, PB, EB,
 ZB, YB).
+
+**Deep links**
+Every dashboard tab has a query shortcut. Open `?links`, `?hubs`,
+`?folders` or `?analytics` to jump directly to a tab.
+`?action-logout` closes your session. `?group-<folder>` opens the
+links view filtered by that folder.
 
 **Multi-language dashboard**
 The admin interface supports Spanish, English, Russian, Simplified
@@ -131,9 +149,9 @@ destination. If it does not match, it falls through to the
 static files served by Pages.
 
 All data is stored in a Cloudflare D1 database: one table for
-links and one for hub configurations. Clicks are recorded in
-Analytics Engine, which is queried via the Cloudflare API to
-display statistics in the dashboard.
+links, one for hub configurations, and one for folders. Clicks
+are recorded in Analytics Engine, which is queried via the
+Cloudflare API to display statistics in the dashboard.
 
 The admin dashboard authenticates using a single token
 (`SITE_TOKEN`), stored in an environment variable.
@@ -213,6 +231,8 @@ used as slugs:
 - `gs`
 - `gs-files`
 - `api`
+- `lib`
+- `functions`
 
 Any slug starting with an underscore (`_`) is also reserved,
 following Cloudflare Pages conventions. The dashboard and API
@@ -246,6 +266,8 @@ GreenShort is designed with security in mind:
 - Analytics are filtered by a per-link identifier and creation
   timestamp, so recreating a link never mixes old data with new
   clicks.
+- Folder identifiers are slugified server-side, and renames are
+  applied atomically across folders, subfolders and items.
 
 The only thing you should never do is expose your `SITE_TOKEN`
 publicly. Treat it like a password.

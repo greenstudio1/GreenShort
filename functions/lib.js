@@ -1,14 +1,8 @@
 // functions/lib.js
 
 export const RESERVED_SLUGS = new Set([
-  "favicon.ico",
-  "favicon.svg",
-  "robots.txt",
-  "sitemap.xml",
-  "gs",
-  "gs-files",
-  "api",
-  "lib"
+  "favicon.ico", "favicon.svg", "robots.txt", "sitemap.xml",
+  "gs", "gs-files", "api", "lib"
 ]);
 
 export function isReservedSlug(slug) {
@@ -19,6 +13,18 @@ export function isReservedSlug(slug) {
   return false;
 }
 
+export function folderSlug(name) {
+  return String(name || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 export const SVG_FAVICON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <rect width="100" height="100" rx="24" fill="#0c110e"/>
   <rect x="2" y="2" width="96" height="96" rx="22" fill="none" stroke="#1f2d24" stroke-width="4"/>
@@ -27,71 +33,24 @@ export const SVG_FAVICON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0
 </svg>`;
 
 const MIGRATIONS = [
-  {
-    version: 1,
-    sql: `CREATE TABLE IF NOT EXISTS links (
-      slug TEXT PRIMARY KEY,
-      type TEXT DEFAULT 'direct',
-      target_url TEXT,
-      splat INTEGER DEFAULT 1,
-      password TEXT,
-      expires_at INTEGER,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )`
-  },
-  {
-    version: 2,
-    sql: `CREATE TABLE IF NOT EXISTS hub_configs (
-      slug TEXT PRIMARY KEY,
-      mode TEXT DEFAULT 'builder',
-      title TEXT,
-      bio TEXT,
-      theme_palette TEXT,
-      btn_style TEXT,
-      bg_type TEXT,
-      bg_val TEXT,
-      custom_html TEXT,
-      lang_mode TEXT DEFAULT 'auto',
-      items_json TEXT
-    )`
-  },
-  {
-    version: 3,
-    sql: `ALTER TABLE links ADD COLUMN captcha INTEGER DEFAULT 0`
-  },
-  {
-    version: 4,
-    sql: `ALTER TABLE links ADD COLUMN captcha_secret TEXT`
-  },
-  {
-    version: 5,
-    sql: `ALTER TABLE links ADD COLUMN link_id TEXT`
-  },
-  {
-    version: 6,
-    sql: `ALTER TABLE links ADD COLUMN created_at_ms INTEGER`
-  },
-  {
-    version: 7,
-    sql: `ALTER TABLE hub_configs ADD COLUMN avatar_url TEXT`
-  }
+  { version: 1, sql: `CREATE TABLE IF NOT EXISTS links (slug TEXT PRIMARY KEY, type TEXT DEFAULT 'direct', target_url TEXT, splat INTEGER DEFAULT 1, password TEXT, expires_at INTEGER, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)` },
+  { version: 2, sql: `CREATE TABLE IF NOT EXISTS hub_configs (slug TEXT PRIMARY KEY, mode TEXT DEFAULT 'builder', title TEXT, bio TEXT, theme_palette TEXT, btn_style TEXT, bg_type TEXT, bg_val TEXT, custom_html TEXT, lang_mode TEXT DEFAULT 'auto', items_json TEXT)` },
+  { version: 3, sql: `ALTER TABLE links ADD COLUMN captcha INTEGER DEFAULT 0` },
+  { version: 4, sql: `ALTER TABLE links ADD COLUMN captcha_secret TEXT` },
+  { version: 5, sql: `ALTER TABLE links ADD COLUMN link_id TEXT` },
+  { version: 6, sql: `ALTER TABLE links ADD COLUMN created_at_ms INTEGER` },
+  { version: 7, sql: `ALTER TABLE hub_configs ADD COLUMN avatar_url TEXT` },
+  { version: 8, sql: `ALTER TABLE links ADD COLUMN folder_id TEXT` },
+  { version: 9, sql: `CREATE TABLE IF NOT EXISTS folders (id TEXT PRIMARY KEY, name TEXT NOT NULL, parent_id TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)` }
 ];
 
 let dbReady = false;
 
 export async function initDB(db) {
   if (dbReady) return;
-
-  await db.prepare(`
-    CREATE TABLE IF NOT EXISTS _migrations (
-      version INTEGER PRIMARY KEY,
-      applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-  `).run();
-
+  await db.prepare(`CREATE TABLE IF NOT EXISTS _migrations (version INTEGER PRIMARY KEY, applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`).run();
   const applied = await db.prepare("SELECT version FROM _migrations").all();
   const appliedVersions = new Set((applied.results || []).map(r => r.version));
-
   for (const m of MIGRATIONS) {
     if (!appliedVersions.has(m.version)) {
       try {
@@ -101,7 +60,6 @@ export async function initDB(db) {
       } catch (e) {
         if (e.message && e.message.includes("duplicate column")) {
           await db.prepare("INSERT INTO _migrations (version) VALUES (?)").bind(m.version).run();
-          console.log("ℹ️ Migración " + m.version + " ya existía (marcada como aplicada)");
         } else {
           console.error("❌ Error en migración " + m.version + ":", e.message);
           throw e;
@@ -109,7 +67,6 @@ export async function initDB(db) {
       }
     }
   }
-
   dbReady = true;
 }
 
@@ -160,13 +117,7 @@ export function genCaptchaText(len = 5) {
 
 export async function hmacSign(secret, message) {
   const enc = new TextEncoder();
-  const key = await crypto.subtle.importKey(
-    "raw",
-    enc.encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"]
-  );
+  const key = await crypto.subtle.importKey("raw", enc.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
   const sig = await crypto.subtle.sign("HMAC", key, enc.encode(message));
   return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, "0")).join("");
 }
@@ -195,14 +146,11 @@ export function recordAnalytics(ctx, env, slug, req, linkId) {
   const ua = req.headers.get("user-agent") || "N/A";
   const referrer = req.headers.get("referer") || "—";
   const ip = req.headers.get("cf-connecting-ip") || req.headers.get("x-real-ip") || "—";
-
   if (env.ANALYTICS) {
-    ctx.waitUntil(
-      env.ANALYTICS.writeDataPoint({
-        blobs: [slug, country, ua, referrer, ip, linkId || ""],
-        doubles: [0],
-        indexes: [slug]
-      })
-    );
+    ctx.waitUntil(env.ANALYTICS.writeDataPoint({
+      blobs: [slug, country, ua, referrer, ip, linkId || ""],
+      doubles: [0],
+      indexes: [slug]
+    }));
   }
 }

@@ -175,6 +175,58 @@ export async function onRequest(context) {
         return json(config || {});
       }
 
+      if (action === "preview-hub" && request.method === "POST") {
+        const body = await request.json();
+        const {
+          title = "Mi Biografía",
+          bio = "",
+          theme_palette = "emerald",
+          btn_style = "rounded",
+          avatar_url = "",
+          items = []
+        } = body;
+
+        const palettes = {
+          emerald: { bg: "#090d0b", card: "#131c17", border: "#1f2e26", text: "#f9fafb", btn: "#10b981", btnText: "#062419" },
+          midnight: { bg: "#0b0f19", card: "#111827", border: "#1f2937", text: "#f3f4f6", btn: "#3b82f6", btnText: "#ffffff" },
+          cyberpunk: { bg: "#18052e", card: "#2b094f", border: "#491088", text: "#fdf4ff", btn: "#f43f5e", btnText: "#ffffff" },
+          minimal_light: { bg: "#f8fafc", card: "#ffffff", border: "#e2e8f0", text: "#0f172a", btn: "#0f172a", btnText: "#ffffff" }
+        };
+        const pal = palettes[theme_palette] || palettes.emerald;
+        let btnRadius = "10px";
+        if (btn_style === "pill") btnRadius = "999px";
+        if (btn_style === "sharp") btnRadius = "2px";
+
+        const linksHtml = (items || []).map(it => {
+          const href = it.is_gs ? `${url.origin}/${it.url}` : it.url;
+          const safeTitle = (it.title || "").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+          return `<a href="${href}" target="_blank" rel="noopener noreferrer" class="hub-btn"><span>${safeTitle}</span><span>&rarr;</span></a>`;
+        }).join("");
+
+        let avatarHtml = "GS";
+        if (avatar_url && avatar_url.trim() !== "") {
+          const safeUrl = avatar_url.replace(/"/g, "&quot;");
+          avatarHtml = `<img src="${safeUrl}" alt="">`;
+        }
+
+        const htmlRes = await fetch(new URL("/gs-files/html/set/hub.html", url.origin));
+        let html = await htmlRes.text();
+        html = html.replace(/{{title}}/g, String(title).replace(/</g, "&lt;").replace(/>/g, "&gt;"));
+        html = html.replace(/{{avatarHtml}}/g, avatarHtml);
+        html = html.replace(/{{bgStyle}}/g, pal.bg);
+        html = html.replace(/{{textColor}}/g, pal.text);
+        html = html.replace(/{{btnColor}}/g, pal.btn);
+        html = html.replace(/{{btnTextColor}}/g, pal.btnText);
+        html = html.replace(/{{cardBg}}/g, pal.card);
+        html = html.replace(/{{borderColor}}/g, pal.border);
+        html = html.replace(/{{btnRadius}}/g, btnRadius);
+        html = html.replace(/{{linksHtml}}/g, linksHtml);
+        html = html.replace(/{{lang}}/g, "es");
+        html = html.replace(/{{bioHtml}}/g, bio ? `<p class="bio">${String(bio).replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>` : '');
+        html = html.replace(/{{[a-z_]+}}/gi, '');
+        return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8" } });
+      }
+
       if (action === "ai-slug" && request.method === "POST") {
         const { targetUrl, desiredLength } = await request.json();
         if (!targetUrl) return json({ error: "Falta URL" }, 400);

@@ -419,6 +419,11 @@
 
     .pwd-toggle svg { width: 18px; height: 18px; display: block; }
 
+    .avatar-input-row { display: flex; gap: 6px; align-items: center; }
+    .avatar-input-row input { flex: 1; }
+    .avatar-upload-btn { padding: 11px 12px; cursor: pointer; font-size: 14px; line-height: 1; }
+    .avatar-clear-btn { padding: 11px 12px; font-size: 14px; line-height: 1; }
+
     .btn-main {
       background: linear-gradient(135deg, #10b981 0%, #059669 100%);
       color: #062419;
@@ -1102,7 +1107,6 @@
       <p>GreenShort is a self-hosted URL shortener running entirely on Cloudflare.</p>
       <ul>
         <li>Enter your <code>SITE_TOKEN</code> configured in Cloudflare Pages environment variables.</li>
-        <li>Minimum 8 characters required.</li>
         <li>All API requests use <code>Authorization: Bearer &lt;token&gt;</code>.</li>
       </ul>
       <p style="margin-top:12px;">Source: <a href="https://github.com/quasvx/GreenShort" target="_blank" rel="noopener">github.com/quasvx/GreenShort</a></p>
@@ -1309,6 +1313,18 @@
       <textarea id="hubCustomHtml" rows="8" placeholder="<!DOCTYPE html><html>...</html>" data-i18n-placeholder="placeholder_hub_custom_html"></textarea>
     </div>
     <div id="hubBuilderWrap">
+      <div>
+        <label data-i18n="lbl_hub_avatar">Foto de perfil</label>
+        <div class="avatar-input-row">
+          <input type="url" id="hubAvatarUrl" placeholder="https://ejemplo.com/foto.jpg" oninput="onHubAvatarUrlChange()">
+          <label for="hubAvatarFile" class="btn-secondary avatar-upload-btn">📁</label>
+          <input type="file" id="hubAvatarFile" accept="image/*" style="display:none;" onchange="handleHubAvatarUpload(event)">
+          <button type="button" class="btn-secondary avatar-clear-btn" onclick="clearHubAvatar()" title="Quitar">✕</button>
+        </div>
+        <div id="hubAvatarPreviewWrap" style="display:none;margin-top:8px;text-align:center;">
+          <img id="hubAvatarPreview" alt="" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid #233228;">
+        </div>
+      </div>
       <div class="grid-2">
         <div><label data-i18n="lbl_hub_title">Título</label><input type="text" id="hubTitle" placeholder="Mi Biografía" data-i18n-placeholder="placeholder_hub_title"></div>
         <div><label data-i18n="lbl_hub_bio">Biografía</label><input type="text" id="hubBio" placeholder="Creador de contenido" data-i18n-placeholder="placeholder_hub_bio"></div>
@@ -1455,6 +1471,7 @@
   var qrCurrentSlug = '';
   var qrFaviconMode = 'default';
   var qrFaviconDataUrl = null;
+  var hubAvatarDataUrl = null;
 
   var BYTE_UNITS = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
 
@@ -1584,7 +1601,6 @@
     var errorEl = document.getElementById('authError');
     var t = currentDict || {};
     if (!val) { errorEl.textContent = t.msg_error_empty_token || '⚠️ Token vacío'; errorEl.style.display = 'block'; return; }
-    if (val.length < 8) { errorEl.textContent = t.msg_error_short_token || '⚠️ Token corto'; errorEl.style.display = 'block'; return; }
     localStorage.setItem('gs_token', val);
     token = val;
     errorEl.style.display = 'none';
@@ -1729,6 +1745,10 @@
     document.getElementById('hubCaptcha').checked = false;
     document.getElementById('btnSaveHub').disabled = false;
     document.getElementById('btnSaveHub').textContent = t.btn_save || 'Guardar';
+    hubAvatarDataUrl = null;
+    document.getElementById('hubAvatarUrl').value = '';
+    document.getElementById('hubAvatarPreviewWrap').style.display = 'none';
+    document.getElementById('hubAvatarFile').value = '';
     addHubItemRow();
     initPwdWraps();
     var modal = document.getElementById('hubModal');
@@ -1948,12 +1968,14 @@
           if (titl && u) items.push({ title: titl, url: u, is_gs: type === 'gs' });
         });
       }
+      var avatarUrl = document.getElementById('hubAvatarUrl').value.trim();
+      if (hubAvatarDataUrl) avatarUrl = hubAvatarDataUrl;
       msg.textContent = t.msg_loading || '...';
       msg.style.color = '#94a3b8';
       var res = await fetch('/api/save-hub', {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug, mode, title, bio, theme_palette, btn_style, custom_html, password, captcha, items })
+        body: JSON.stringify({ slug, mode, title, bio, theme_palette, btn_style, custom_html, password, captcha, items, avatar_url: avatarUrl })
       });
       var data = null;
       try { data = await res.json(); } catch(e) {}
@@ -2209,6 +2231,17 @@
         document.getElementById('hubBio').value = hub.bio || '';
         document.getElementById('hubPalette').value = hub.theme_palette || 'emerald';
         document.getElementById('hubBtnStyle').value = hub.btn_style || 'rounded';
+        var av = hub.avatar_url || '';
+        hubAvatarDataUrl = null;
+        document.getElementById('hubAvatarUrl').value = av;
+        var prevWrap = document.getElementById('hubAvatarPreviewWrap');
+        var prevImg = document.getElementById('hubAvatarPreview');
+        if (av) {
+          prevImg.src = av;
+          prevWrap.style.display = 'block';
+        } else {
+          prevWrap.style.display = 'none';
+        }
         var container = document.getElementById('hubItemsRows');
         container.innerHTML = '';
         var items = [];
@@ -2474,6 +2507,47 @@
     qrFaviconDataUrl = null;
     document.getElementById('qrFaviconPreview').src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%2394a3b8" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
     renderQr();
+  }
+
+  function onHubAvatarUrlChange() {
+    hubAvatarDataUrl = null;
+    var v = document.getElementById('hubAvatarUrl').value.trim();
+    var prevWrap = document.getElementById('hubAvatarPreviewWrap');
+    var prevImg = document.getElementById('hubAvatarPreview');
+    if (v) {
+      prevImg.src = v;
+      prevWrap.style.display = 'block';
+    } else {
+      prevWrap.style.display = 'none';
+    }
+  }
+
+  function handleHubAvatarUpload(ev) {
+    var file = ev.target.files && ev.target.files[0];
+    if (!file) return;
+    if (file.size > 500 * 1024) {
+      showToast('❌ Imagen muy grande (máx 500 KB)', 'error');
+      ev.target.value = '';
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      hubAvatarDataUrl = e.target.result;
+      document.getElementById('hubAvatarUrl').value = '';
+      var prevWrap = document.getElementById('hubAvatarPreviewWrap');
+      var prevImg = document.getElementById('hubAvatarPreview');
+      prevImg.src = hubAvatarDataUrl;
+      prevWrap.style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+    ev.target.value = '';
+  }
+
+  function clearHubAvatar() {
+    hubAvatarDataUrl = null;
+    document.getElementById('hubAvatarUrl').value = '';
+    document.getElementById('hubAvatarPreviewWrap').style.display = 'none';
+    document.getElementById('hubAvatarFile').value = '';
   }
 
   document.addEventListener('keydown', function(e) {

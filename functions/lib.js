@@ -69,6 +69,10 @@ const MIGRATIONS = [
   {
     version: 6,
     sql: `ALTER TABLE links ADD COLUMN created_at_ms INTEGER`
+  },
+  {
+    version: 7,
+    sql: `ALTER TABLE hub_configs ADD COLUMN avatar_url TEXT`
   }
 ];
 

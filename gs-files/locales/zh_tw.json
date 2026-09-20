@@ -123,5 +123,22 @@
   "pc_error": "密碼或驗證錯誤",
   "pc_lbl_pwd": "密碼",
   "pc_lbl_captcha": "驗證",
-  "lbl_hub_avatar": "頭像"
+  "lbl_hub_avatar": "頭像",
+  "tab_folders": "資料夾",
+  "folder_all": "全部",
+  "folder_unassigned": "未分類",
+  "folder_new": "新增資料夾", 
+  "folder_new_sub": "新增子資料夾",
+  "folder_name": "資料夾名稱",
+  "folder_rename": "重新命名",
+  "folder_delete": "刪除",
+  "folder_empty": "此資料夾為空",
+  "folder_items": "項",
+  "folder_confirm_delete": "刪除資料夾？其中的項目將移至未分類。",
+  "folder_no_folders": "尚無資料夾",
+  "folder_filter": "資料夾",
+  "folder_created": "資料夾已建立",
+  "folder_renamed": "資料夾已重新命名",
+  "folder_deleted": "資料夾已刪除",
+  "folder_moved": "項目已移動"
 }

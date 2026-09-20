@@ -1,4 +1,6 @@
-# GreenShort
+<p align="center">
+  <img src="https://raw.githubusercontent.com/quasvx/GreenShort/main/gs-files/static/github/GreenShort.png" alt="GreenShort" style="width: 100%; max-width: 400px; height: auto;">
+</p>
 
 Self-hosted URL shortener that runs entirely on Cloudflare.
 No servers, no external databases, no dependencies.

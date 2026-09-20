@@ -462,7 +462,7 @@ export async function onRequest(context) {
       }
     }
 
-    if (!link) return new Response("Enlace no encontrado", { status: 404 });
+    if (!link) return new Response("Link or Hub not found", { status: 404 });
     if (link.expires_at && Date.now() > Number(link.expires_at)) return new Response("Este enlace ha expirado.", { status: 410 });
 
     function buildTarget() {

@@ -122,5 +122,6 @@
   "pc_btn": "进入",
   "pc_error": "密码或验证错误",
   "pc_lbl_pwd": "密码",
-  "pc_lbl_captcha": "验证"
+  "pc_lbl_captcha": "验证",
+  "lbl_hub_avatar": "Фото профиля"
 }

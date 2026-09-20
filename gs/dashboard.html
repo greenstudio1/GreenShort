@@ -1033,6 +1033,46 @@
       margin-top: 16px;
     }
 
+    .hub-modal-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .hub-preview-wrap {
+      position: sticky;
+      top: 0;
+    }
+
+    .hub-preview-frame {
+      width: 100%;
+      height: 600px;
+      border: 1px solid #233228;
+      border-radius: 12px;
+      background: #0c110e;
+      overflow: hidden;
+    }
+
+    .hub-preview-frame iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+    }
+
+    @media (max-width: 900px) {
+      .hub-modal-grid {
+        grid-template-columns: 1fr;
+      }
+      .hub-preview-frame {
+        height: 400px;
+      }
+      .hub-preview-wrap {
+        position: static;
+      }
+    }
+
     @media (max-width: 640px) {
       .storage-badge { font-size: 12px; padding: 7px 14px; min-width: 120px; }
       .storage-badge .spinner { width: 14px; height: 14px; }
@@ -1274,89 +1314,102 @@
 </div>
 
 <div id="hubModal" class="modal-overlay">
-  <div class="modal-box">
+  <div class="modal-box" style="max-width: 1100px;">
     <div class="modal-header">
       <h2 data-i18n="modal_hub_title">🎨 Diseñar Conjunto de Enlaces</h2>
       <button class="modal-close" onclick="closeModals()">✕</button>
     </div>
-    <div class="grid-2">
-      <div>
-        <label id="lblHubSlugDynamic" data-i18n="lbl_hub_slug">Slug</label>
-        <input type="text" id="hubSlug" maxlength="20" placeholder="mis-enlaces/hub" data-i18n-placeholder="placeholder_hub_slug" oninput="validateSlug(this)">
-      </div>
-      <div>
-        <label data-i18n="lbl_hub_mode">Modo</label>
-        <select id="hubMode" onchange="toggleHubMode()">
-          <option value="builder" data-i18n="opt_builder">Constructor Visual</option>
-          <option value="custom_html" data-i18n="opt_html">HTML Personalizado</option>
-        </select>
-      </div>
-    </div>
-    <div>
-      <label data-i18n="lbl_hub_pwd">Contraseña del Conjunto (Opcional)</label>
-      <div class="pwd-wrap">
-        <input type="text" id="hubPassword" placeholder="Dejar vacío si es público" data-i18n-placeholder="placeholder_pwd_public" autocomplete="off" spellcheck="false">
-        <button type="button" class="pwd-toggle" onclick="togglePwd('hubPassword', this)" tabindex="-1" aria-label="Toggle password visibility">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-        </button>
-      </div>
-    </div>
-    <div class="switch-row">
-      <span data-i18n="lbl_captcha">🧩 Requerir captcha</span>
-      <label class="switch">
-        <input type="checkbox" id="hubCaptcha">
-        <span class="slider"></span>
-      </label>
-    </div>
-    <div id="hubCustomHtmlWrap" style="display:none;margin-top:12px;">
-      <label>HTML / CSS</label>
-      <textarea id="hubCustomHtml" rows="8" placeholder="<!DOCTYPE html><html>...</html>" data-i18n-placeholder="placeholder_hub_custom_html"></textarea>
-    </div>
-    <div id="hubBuilderWrap">
-      <div>
-        <label data-i18n="lbl_hub_avatar">Foto de perfil</label>
-        <div class="avatar-input-row">
-          <input type="url" id="hubAvatarUrl" placeholder="https://ejemplo.com/foto.jpg" oninput="onHubAvatarUrlChange()">
-          <label for="hubAvatarFile" class="btn-secondary avatar-upload-btn">📁</label>
-          <input type="file" id="hubAvatarFile" accept="image/*" style="display:none;" onchange="handleHubAvatarUpload(event)">
-          <button type="button" class="btn-secondary avatar-clear-btn" onclick="clearHubAvatar()" title="Quitar">✕</button>
-        </div>
-        <div id="hubAvatarPreviewWrap" style="display:none;margin-top:8px;text-align:center;">
-          <img id="hubAvatarPreview" alt="" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid #233228;">
-        </div>
-      </div>
-      <div class="grid-2">
-        <div><label data-i18n="lbl_hub_title">Título</label><input type="text" id="hubTitle" placeholder="Mi Biografía" data-i18n-placeholder="placeholder_hub_title"></div>
-        <div><label data-i18n="lbl_hub_bio">Biografía</label><input type="text" id="hubBio" placeholder="Creador de contenido" data-i18n-placeholder="placeholder_hub_bio"></div>
-      </div>
-      <div class="grid-2">
-        <div>
-          <label data-i18n="lbl_hub_palette">Paleta</label>
-          <select id="hubPalette">
-            <option value="emerald">Emerald Dark</option>
-            <option value="midnight">Midnight Blue</option>
-            <option value="cyberpunk">Cyberpunk Neon</option>
-            <option value="minimal_light">Minimal White</option>
-          </select>
+
+    <div class="hub-modal-grid">
+      <div class="hub-modal-form">
+        <div class="grid-2">
+          <div>
+            <label id="lblHubSlugDynamic" data-i18n="lbl_hub_slug">Slug</label>
+            <input type="text" id="hubSlug" maxlength="20" placeholder="mis-enlaces/hub" data-i18n-placeholder="placeholder_hub_slug" oninput="validateSlug(this)">
+          </div>
+          <div>
+            <label data-i18n="lbl_hub_mode">Modo</label>
+            <select id="hubMode" onchange="toggleHubMode()">
+              <option value="builder" data-i18n="opt_builder">Constructor Visual</option>
+              <option value="custom_html" data-i18n="opt_html">HTML Personalizado</option>
+            </select>
+          </div>
         </div>
         <div>
-          <label data-i18n="lbl_hub_buttons">Estilo de Botones</label>
-          <select id="hubBtnStyle">
-            <option value="rounded">Bordes Suaves</option>
-            <option value="pill">Redondos (Pills)</option>
-            <option value="sharp">Rectangulares</option>
-          </select>
+          <label data-i18n="lbl_hub_pwd">Contraseña del Conjunto (Opcional)</label>
+          <div class="pwd-wrap">
+            <input type="text" id="hubPassword" placeholder="Dejar vacío si es público" data-i18n-placeholder="placeholder_pwd_public" autocomplete="off" spellcheck="false">
+            <button type="button" class="pwd-toggle" onclick="togglePwd('hubPassword', this)" tabindex="-1" aria-label="Toggle password visibility">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
         </div>
+        <div class="switch-row">
+          <span data-i18n="lbl_captcha">🧩 Requerir captcha</span>
+          <label class="switch">
+            <input type="checkbox" id="hubCaptcha">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div id="hubCustomHtmlWrap" style="display:none;margin-top:12px;">
+          <label>HTML / CSS</label>
+          <textarea id="hubCustomHtml" rows="8" placeholder="<!DOCTYPE html><html>...</html>" data-i18n-placeholder="placeholder_hub_custom_html"></textarea>
+        </div>
+        <div id="hubBuilderWrap">
+          <div>
+            <label data-i18n="lbl_hub_avatar">Foto de perfil</label>
+            <div class="avatar-input-row">
+              <input type="url" id="hubAvatarUrl" placeholder="https://ejemplo.com/foto.jpg" oninput="onHubAvatarUrlChange()">
+              <label for="hubAvatarFile" class="btn-secondary avatar-upload-btn">📁</label>
+              <input type="file" id="hubAvatarFile" accept="image/*" style="display:none;" onchange="handleHubAvatarUpload(event)">
+              <button type="button" class="btn-secondary avatar-clear-btn" onclick="clearHubAvatar()" title="Quitar">✕</button>
+            </div>
+            <div id="hubAvatarPreviewWrap" style="display:none;margin-top:8px;text-align:center;">
+              <img id="hubAvatarPreview" alt="" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid #233228;">
+            </div>
+          </div>
+          <div class="grid-2">
+            <div><label data-i18n="lbl_hub_title">Título</label><input type="text" id="hubTitle" placeholder="Mi Biografía" data-i18n-placeholder="placeholder_hub_title"></div>
+            <div><label data-i18n="lbl_hub_bio">Biografía</label><input type="text" id="hubBio" placeholder="Creador de contenido" data-i18n-placeholder="placeholder_hub_bio"></div>
+          </div>
+          <div class="grid-2">
+            <div>
+              <label data-i18n="lbl_hub_palette">Paleta</label>
+              <select id="hubPalette">
+                <option value="emerald">Emerald Dark</option>
+                <option value="midnight">Midnight Blue</option>
+                <option value="cyberpunk">Cyberpunk Neon</option>
+                <option value="minimal_light">Minimal White</option>
+              </select>
+            </div>
+            <div>
+              <label data-i18n="lbl_hub_buttons">Estilo de Botones</label>
+              <select id="hubBtnStyle">
+                <option value="rounded">Bordes Suaves</option>
+                <option value="pill">Redondos (Pills)</option>
+                <option value="sharp">Rectangulares</option>
+              </select>
+            </div>
+          </div>
+          <div style="margin-top:14px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+              <label style="margin:0;" data-i18n="lbl_hub_links">Enlaces del Conjunto</label>
+              <button class="btn-secondary" style="font-size:11px;padding:5px 10px;" onclick="addHubItemRow()">+ Añadir</button>
+            </div>
+            <div id="hubItemsRows"></div>
+          </div>
+        </div>
+        <div id="hubModalError" class="error-text" style="display:none;"></div>
       </div>
-      <div style="margin-top:14px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-          <label style="margin:0;" data-i18n="lbl_hub_links">Enlaces del Conjunto</label>
-          <button class="btn-secondary" style="font-size:11px;padding:5px 10px;" onclick="addHubItemRow()">+ Añadir</button>
+
+      <div class="hub-preview-wrap">
+        <label style="margin-top:0;">Preview</label>
+        <div class="hub-preview-frame">
+          <iframe id="hubPreviewFrame" sandbox="allow-same-origin"></iframe>
         </div>
-        <div id="hubItemsRows"></div>
       </div>
     </div>
-    <div id="hubModalError" class="error-text" style="display:none;"></div>
+
     <div class="row-btn">
       <button class="btn-main" style="flex:1;" id="btnSaveHub" data-i18n="btn_save" onclick="saveHub()">Guardar Conjunto</button>
       <button class="btn-secondary" data-i18n="btn_cancel" onclick="closeModals()">Cancelar</button>
@@ -1472,6 +1525,7 @@
   var qrFaviconMode = 'default';
   var qrFaviconDataUrl = null;
   var hubAvatarDataUrl = null;
+  var hubPreviewTimer = null;
 
   var BYTE_UNITS = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
 
@@ -1756,12 +1810,14 @@
     requestAnimationFrame(function() { modal.classList.add('active'); });
     applyTranslations();
     loadStorage();
+    setTimeout(updateHubPreview, 100);
   }
 
   function toggleHubMode() {
     var isCustom = document.getElementById('hubMode').value === 'custom_html';
     document.getElementById('hubBuilderWrap').style.display = isCustom ? 'none' : 'block';
     document.getElementById('hubCustomHtmlWrap').style.display = isCustom ? 'block' : 'none';
+    scheduleHubPreview();
   }
 
   function addHubItemRow(title, urlVal, isGs) {
@@ -1792,9 +1848,10 @@
     html += gsOptions;
     html += '</select>';
     html += '<input type="url" placeholder="https://..." class="hi-bare-url" value="' + (!isGs ? urlVal : '') + '" style="flex:1.5; min-width: 130px; ' + (isGs ? 'display:none;' : '') + '">';
-    html += '<button class="btn-icon" onclick="this.parentElement.remove()" style="color:#f87171;">✕</button>';
+    html += '<button class="btn-icon" onclick="this.parentElement.remove(); scheduleHubPreview();" style="color:#f87171;">✕</button>';
     div.innerHTML = html;
     document.getElementById('hubItemsRows').appendChild(div);
+    scheduleHubPreview();
   }
 
   function toggleItemType(selectEl) {
@@ -1802,6 +1859,7 @@
     var isGs = selectEl.value === 'gs';
     row.querySelector('.hi-gs-select').style.display = isGs ? 'block' : 'none';
     row.querySelector('.hi-bare-url').style.display = isGs ? 'none' : 'block';
+    scheduleHubPreview();
   }
 
   function applyRandomSlug() {
@@ -2254,6 +2312,7 @@
       modal.style.display = 'flex';
       requestAnimationFrame(function() { modal.classList.add('active'); });
       applyTranslations();
+      setTimeout(updateHubPreview, 200);
     } catch (error) { showToast('❌ ' + error.message, 'error'); }
   }
 
@@ -2520,6 +2579,7 @@
     } else {
       prevWrap.style.display = 'none';
     }
+    scheduleHubPreview();
   }
 
   function handleHubAvatarUpload(ev) {
@@ -2538,6 +2598,7 @@
       var prevImg = document.getElementById('hubAvatarPreview');
       prevImg.src = hubAvatarDataUrl;
       prevWrap.style.display = 'block';
+      scheduleHubPreview();
     };
     reader.readAsDataURL(file);
     ev.target.value = '';
@@ -2548,7 +2609,68 @@
     document.getElementById('hubAvatarUrl').value = '';
     document.getElementById('hubAvatarPreviewWrap').style.display = 'none';
     document.getElementById('hubAvatarFile').value = '';
+    scheduleHubPreview();
   }
+
+  function scheduleHubPreview() {
+    clearTimeout(hubPreviewTimer);
+    hubPreviewTimer = setTimeout(function() {
+      updateHubPreview();
+    }, 300);
+  }
+
+  async function updateHubPreview() {
+    var iframe = document.getElementById('hubPreviewFrame');
+    if (!iframe) return;
+
+    var mode = document.getElementById('hubMode').value;
+    if (mode === 'custom_html') {
+      iframe.srcdoc = '<!DOCTYPE html><html><body style="margin:0;background:#0c110e;color:#475569;font-family:-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;font-size:12px;text-align:center;padding:20px;">Custom HTML mode has no live preview.<br>Save and open the link to see it.</body></html>';
+      return;
+    }
+
+    var title = document.getElementById('hubTitle').value.trim() || 'Mi Biografía';
+    var bio = document.getElementById('hubBio').value.trim();
+    var palette = document.getElementById('hubPalette').value;
+    var btnStyle = document.getElementById('hubBtnStyle').value;
+    var avatarUrl = document.getElementById('hubAvatarUrl').value.trim();
+    if (hubAvatarDataUrl) avatarUrl = hubAvatarDataUrl;
+
+    var items = [];
+    document.querySelectorAll('.hub-item-row').forEach(function(row) {
+      var t = row.querySelector('.hi-title').value.trim();
+      var type = row.querySelector('.hi-type').value;
+      var u = type === 'gs' ? row.querySelector('.hi-gs-select').value : row.querySelector('.hi-bare-url').value.trim();
+      if (t && u) items.push({ title: t, url: u, is_gs: type === 'gs' });
+    });
+
+    try {
+      var res = await fetch('/api/preview-hub', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: title,
+          bio: bio,
+          theme_palette: palette,
+          btn_style: btnStyle,
+          avatar_url: avatarUrl,
+          items: items
+        })
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      var html = await res.text();
+      iframe.srcdoc = html;
+    } catch (e) {
+      iframe.srcdoc = '<!DOCTYPE html><html><body style="margin:0;background:#0c110e;color:#fca5a5;font-family:-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;font-size:12px;text-align:center;padding:20px;">Error loading preview</body></html>';
+    }
+  }
+
+  document.getElementById('hubModal').addEventListener('input', function(e) {
+    if (e.target.closest('.hub-modal-form')) scheduleHubPreview();
+  });
+  document.getElementById('hubModal').addEventListener('change', function(e) {
+    if (e.target.closest('.hub-modal-form')) scheduleHubPreview();
+  });
 
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') { closeModals(); closeQrModal(); }

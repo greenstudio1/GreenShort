@@ -122,5 +122,22 @@
   "pc_btn": "Войти",
   "pc_error": "Неверный пароль или проверка",
   "pc_lbl_pwd": "Пароль",
-  "pc_lbl_captcha": "Проверка"
+  "pc_lbl_captcha": "Проверка",
+  "tab_folders": "Папки",
+  "folder_all": "Все",
+  "folder_unassigned": "Без папки",
+  "folder_new": "Новая папка",
+  "folder_new_sub": "Новая подпапка",
+  "folder_name": "Название папки",
+  "folder_rename": "Переименовать",
+  "folder_delete": "Удалить",
+  "folder_empty": "Эта папка пуста",
+  "folder_items": "элементов",
+  "folder_confirm_delete": "Удалить папку? Элементы перейдут в Без папки.",
+  "folder_no_folders": "Папок пока нет",
+  "folder_filter": "Папка",
+  "folder_created": "Папка создана",
+  "folder_renamed": "Папка переименована",
+  "folder_deleted": "Папка удалена",
+  "folder_moved": "Элементы перемещены"
 }

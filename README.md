@@ -20,7 +20,7 @@ It is built for people who want their own shortener without relying
 on third-party services, without paying subscriptions, and without
 worrying about servers. You only need a Cloudflare account, a domain
 (or the free Pages subdomain), and to follow the setup steps.
-I would recommend using DNSHE, l.cd or cc.cd are both great options 
+I would recommend using DNSHE, l.cd or cc.cd are both great options
 for deploying this repository. (non-promotion)
 
 <p align="center">
@@ -38,8 +38,27 @@ Each link can point to its own destination URL.
 
 **Link hubs (link-in-bio)**
 Design link-in-bio style pages with multiple buttons, title, bio,
-and color palette. Perfect for Instagram, TikTok, or any profile
-where you want to group several destinations.
+custom profile picture, and color palette. Perfect for Instagram,
+TikTok, or any profile where you want to group several destinations.
+
+**Profile picture in hubs**
+Every hub can show a custom avatar instead of the default "GS"
+badge. Paste an external URL or upload a local image (up to 500 KB)
+directly from the dashboard. If no avatar is set, the default
+badge is used.
+
+**File slugs**
+Slugs can include dots inside a segment, so you can create clean
+short links that end in file extensions like `/promo/wa.pdf` or
+`/assets/imagen.png`. Dots are not allowed at the start or end of
+a segment, nor doubled.
+
+**Subroutes with splat**
+A link can capture everything that comes after the slug and pass
+it to the destination. For example, `/promo/summer/discount` can
+forward `/discount` to the target URL. Child links under a splat
+parent are fully supported, so `/promo/wa` can be a standalone
+link while `/promo/anything` falls back to the parent splat.
 
 **AI-generated slugs**
 Enter a URL and GreenShort analyzes the page content (title and
@@ -52,6 +71,11 @@ It does not depend on Google reCAPTCHA or any external service.
 It is a custom visual challenge, signed with HMAC and validated
 with a secure cookie.
 
+**Combined password + captcha**
+When a link requires both, the dashboard serves a single
+combined page so the visitor only fills one form. No state is
+lost between steps, and the redirect happens in one pass.
+
 **Password protection**
 You can protect any link or hub with a password.
 Visitors must enter it before reaching the destination.
@@ -60,15 +84,18 @@ Visitors must enter it before reaching the destination.
 Configure how long a link stays active: minutes, hours, days, or
 "never". Once expired, the link stops working automatically.
 
-**Splat subroutes**
-A link can capture everything that comes after the slug and pass
-it to the destination. For example, `/promo/summer/discount` can
-forward `/discount` to the target URL.
-
 **Click analytics**
 Every visit is recorded with country, user agent, referrer, IP,
-and timestamp. View the data in the Analytics tab or the Click
-Flow tab inside the dashboard.
+and timestamp. View the data in the Analytics tab. Clicks from
+different versions of the same slug are kept separate, so
+recreating a link does not mix old analytics with new ones.
+
+**QR generation**
+Generate QR codes for any link or hub directly from the
+dashboard. Customize the color, background, size, margin,
+error correction level, and the icon shown in the center. Upload
+a custom favicon or use the default one, then download as PNG or
+copy the image to your clipboard.
 
 **Storage usage indicator**
 The header shows how much of your D1 database is used, in real
@@ -83,9 +110,6 @@ user.
 **Dark theme**
 The entire dashboard uses a dark, minimal design with green
 accents, optimized for both desktop and mobile.
-
-**QR Generation**
-Generate QRs easily, with 3-5 clicks
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/quasvx/GreenShort/main/gs-files/static/github/LinksDashboardPreview.png" alt="Links Dashboard Preview" width="850">
@@ -112,6 +136,7 @@ display statistics in the dashboard.
 The admin dashboard authenticates using a single token
 (`SITE_TOKEN`), stored in an environment variable.
 All API requests require this token as a Bearer header.
+
 <p align="center">
   <img src="https://raw.githubusercontent.com/quasvx/GreenShort/refs/heads/main/gs-files/static/github/OurWebsitePreview.png" alt="GreenShort Preview" width="850" style="border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.15);">
 </p>
@@ -130,7 +155,7 @@ Before deploying, make sure you have:
 - An Analytics Engine dataset (optional but recommended for
   click tracking).
 - The following environment variables configured in Pages:
-  - `SITE_TOKEN` - the admin password (minimum 8 characters).
+  - `SITE_TOKEN` - the admin password. Any length is accepted.
   - `CF_ACCOUNT_ID` - your Cloudflare account ID.
   - `CF_D1_ID` - the D1 database ID.
   - `CF_API_TOKEN` - an API token with permissions to read D1
@@ -192,10 +217,10 @@ following Cloudflare Pages conventions. The dashboard and API
 both validate this, so you cannot create a slug that would
 break the system.
 
-The `gs` folder contains all the HTML files for the dashboard
-and public pages. The `gs-files` folder contains static assets
-like locales and images. Both are served directly by Pages and
-never intercepted by the Worker's link resolution logic.
+The `gs` folder contains the admin dashboard. The `gs-files`
+folder contains static assets like locales, images, scripts,
+and public pages. Both are served directly by Pages and never
+intercepted by the Worker's link resolution logic.
 
 
 ---
@@ -209,10 +234,16 @@ GreenShort is designed with security in mind:
 - All API endpoints require the token as a Bearer header.
 - Captchas are signed with HMAC using a per-link secret.
 - Password-protected links compare passwords server-side.
-- Captcha cookies are HttpOnly, Secure, and SameSite=Strict.
+- Captcha cookies are HttpOnly, Secure, and SameSite=Lax.
 - Reserved routes are validated both on the frontend and the
   backend, so a user cannot create a link that would shadow
   internal routes.
+- Passwords and captcha inputs use a custom visibility toggle
+  that never uses `type="password"`, so browsers and extensions
+  do not offer to autofill or save them.
+- Analytics are filtered by a per-link identifier and creation
+  timestamp, so recreating a link never mixes old data with new
+  clicks.
 
 The only thing you should never do is expose your `SITE_TOKEN`
 publicly. Treat it like a password.
@@ -238,6 +269,28 @@ That is it. No build step, no external services, no maintenance.
 <p align="center">
   <img src="https://raw.githubusercontent.com/quasvx/GreenShort/refs/heads/main/gs-files/static/github/BindingsPreview.png" alt="Bindings Preview" width="850">
 </p>
+
+---
+
+## Project structure
+
+    functions/
+      [[path]].js       Worker that handles every request
+      lib.js            Shared helpers (migrations, auth, captcha)
+
+    gs/
+      dashboard.html    Admin dashboard
+
+    gs-files/
+      html/set/
+        hub.html               Hub template
+        password.html          Password page
+        captcha.html           Captcha page
+        password-captcha.html  Combined password + captcha page
+      js/
+        qrcode.min.js          QR library (served locally)
+      locales/                 Translation files
+      static/                  Images and other assets
 
 ---
 

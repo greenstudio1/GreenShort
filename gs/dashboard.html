@@ -2619,51 +2619,64 @@
     }, 300);
   }
 
-  async function updateHubPreview() {
-    var iframe = document.getElementById('hubPreviewFrame');
-    if (!iframe) return;
+async function updateHubPreview() {
+  var iframe = document.getElementById('hubPreviewFrame');
+  if (!iframe) return;
 
-    var mode = document.getElementById('hubMode').value;
-    if (mode === 'custom_html') {
-      iframe.srcdoc = '<!DOCTYPE html><html><body style="margin:0;background:#0c110e;color:#475569;font-family:-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;font-size:12px;text-align:center;padding:20px;">Custom HTML mode has no live preview.<br>Save and open the link to see it.</body></html>';
-      return;
+  var mode = document.getElementById('hubMode').value;
+
+  if (mode === 'custom_html') {
+    var customHtml = document.getElementById('hubCustomHtml').value;
+    if (!customHtml.trim()) {
+      iframe.srcdoc = '<!DOCTYPE html><html><body style="margin:0;background:#0c110e;color:#475569;font-family:-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;font-size:12px;text-align:center;padding:20px;">Escribe algo de HTML para ver la preview.</body></html>';
+    } else {
+      // Reemplazar los placeholders básicos por si el user los usa
+      var rendered = customHtml
+        .replace(/{{slug}}/g, document.getElementById('hubSlug').value || 'mi-hub')
+        .replace(/{{title}}/g, document.getElementById('hubTitle').value || 'Mi Biografía')
+        .replace(/{{bio}}/g, document.getElementById('hubBio').value || '')
+        .replace(/{{origin}}/g, window.location.origin);
+      iframe.srcdoc = rendered;
     }
-
-    var title = document.getElementById('hubTitle').value.trim() || 'Mi Biografía';
-    var bio = document.getElementById('hubBio').value.trim();
-    var palette = document.getElementById('hubPalette').value;
-    var btnStyle = document.getElementById('hubBtnStyle').value;
-    var avatarUrl = document.getElementById('hubAvatarUrl').value.trim();
-    if (hubAvatarDataUrl) avatarUrl = hubAvatarDataUrl;
-
-    var items = [];
-    document.querySelectorAll('.hub-item-row').forEach(function(row) {
-      var t = row.querySelector('.hi-title').value.trim();
-      var type = row.querySelector('.hi-type').value;
-      var u = type === 'gs' ? row.querySelector('.hi-gs-select').value : row.querySelector('.hi-bare-url').value.trim();
-      if (t && u) items.push({ title: t, url: u, is_gs: type === 'gs' });
-    });
-
-    try {
-      var res = await fetch('/api/preview-hub', {
-        method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: title,
-          bio: bio,
-          theme_palette: palette,
-          btn_style: btnStyle,
-          avatar_url: avatarUrl,
-          items: items
-        })
-      });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      var html = await res.text();
-      iframe.srcdoc = html;
-    } catch (e) {
-      iframe.srcdoc = '<!DOCTYPE html><html><body style="margin:0;background:#0c110e;color:#fca5a5;font-family:-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;font-size:12px;text-align:center;padding:20px;">Error loading preview</body></html>';
-    }
+    return;
   }
+
+  // Modo builder (lo que ya tenías)
+  var title = document.getElementById('hubTitle').value.trim() || 'Mi Biografía';
+  var bio = document.getElementById('hubBio').value.trim();
+  var palette = document.getElementById('hubPalette').value;
+  var btnStyle = document.getElementById('hubBtnStyle').value;
+  var avatarUrl = document.getElementById('hubAvatarUrl').value.trim();
+  if (hubAvatarDataUrl) avatarUrl = hubAvatarDataUrl;
+
+  var items = [];
+  document.querySelectorAll('.hub-item-row').forEach(function(row) {
+    var t = row.querySelector('.hi-title').value.trim();
+    var type = row.querySelector('.hi-type').value;
+    var u = type === 'gs' ? row.querySelector('.hi-gs-select').value : row.querySelector('.hi-bare-url').value.trim();
+    if (t && u) items.push({ title: t, url: u, is_gs: type === 'gs' });
+  });
+
+  try {
+    var res = await fetch('/api/preview-hub', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: title,
+        bio: bio,
+        theme_palette: palette,
+        btn_style: btnStyle,
+        avatar_url: avatarUrl,
+        items: items
+      })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    var html = await res.text();
+    iframe.srcdoc = html;
+  } catch (e) {
+    iframe.srcdoc = '<!DOCTYPE html><html><body style="margin:0;background:#0c110e;color:#fca5a5;font-family:-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;font-size:12px;text-align:center;padding:20px;">Error loading preview</body></html>';
+  }
+}
 
   document.getElementById('hubModal').addEventListener('input', function(e) {
     if (e.target.closest('.hub-modal-form')) scheduleHubPreview();

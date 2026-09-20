@@ -1,4 +1,4 @@
-// functions/[[path]].js
+//  functions/[[path]].js
 
 import { RESERVED_SLUGS, isReservedSlug, folderSlug, SVG_FAVICON, initDB, authCheck, json, genRandomSlug, genLinkId, validateSlugFormat, genCaptchaText, hmacSign, verifyCaptchaCookie, makeCaptchaCookie, recordAnalytics } from './lib.js';
 

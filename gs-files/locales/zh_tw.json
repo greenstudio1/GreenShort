@@ -122,5 +122,6 @@
   "pc_btn": "進入",
   "pc_error": "密碼或驗證錯誤",
   "pc_lbl_pwd": "密碼",
-  "pc_lbl_captcha": "驗證"
+  "pc_lbl_captcha": "驗證",
+  "lbl_hub_avatar": "頭像"
 }

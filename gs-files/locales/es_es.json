@@ -122,5 +122,6 @@
   "pc_btn": "Entrar",
   "pc_error": "Contraseña o verificación incorrectas",
   "pc_lbl_pwd": "Contraseña",
-  "pc_lbl_captcha": "Verificación"
+  "pc_lbl_captcha": "Verificación",
+  "lbl_hub_avatar": "Foto de perfil"
 }

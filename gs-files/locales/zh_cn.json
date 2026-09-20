@@ -123,5 +123,22 @@
   "pc_error": "密码或验证错误",
   "pc_lbl_pwd": "密码",
   "pc_lbl_captcha": "验证",
-  "lbl_hub_avatar": "Фото профиля"
+  "lbl_hub_avatar": "Фото профиля",
+  "tab_folders": "文件夹",
+  "folder_all": "全部",
+  "folder_unassigned": "未分类",
+  "folder_new": "新建文件夹",
+  "folder_new_sub": "新建子文件夹",
+  "folder_name": "文件夹名称",
+  "folder_rename": "重命名",
+  "folder_delete": "删除",
+  "folder_empty": "此文件夹为空",
+  "folder_items": "项",
+  "folder_confirm_delete": "删除文件夹？其中的项目将移至未分类。",
+  "folder_no_folders": "暂无文件夹",
+  "folder_filter": "文件夹",
+  "folder_created": "文件夹已创建",
+  "folder_renamed": "文件夹已重命名",
+  "folder_deleted": "文件夹已删除",
+  "folder_moved": "项目已移动"
 }

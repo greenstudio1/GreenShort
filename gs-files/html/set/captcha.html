@@ -60,20 +60,22 @@
 
   <script>
     var SLUG = '{{slug}}';
+    var DOMAIN = '{{domain}}';
+    var ADMIN_ORIGIN = '{{admin_origin}}';
     var HAS_ERROR = "{{hasError}}" === "true";
     var currentText = '';
     var currentChallengeId = '';
 
     async function loadLocale(lang) {
       try {
-        var res = await fetch('/gs-files/locales/' + lang + '.json?v=' + Date.now());
+        var res = await fetch(ADMIN_ORIGIN + '/gs-files/locales/' + lang + '.json?v=' + Date.now());
         if (!res.ok) {
-          var fallback = await fetch('/gs-files/locales/es_es.json?v=' + Date.now());
+          var fallback = await fetch(ADMIN_ORIGIN + '/gs-files/locales/es_es.json?v=' + Date.now());
           return await fallback.json();
         }
         return await res.json();
       } catch {
-        var fallback = await fetch('/gs-files/locales/es_es.json?v=' + Date.now());
+        var fallback = await fetch(ADMIN_ORIGIN + '/gs-files/locales/es_es.json?v=' + Date.now());
         return await fallback.json();
       }
     }
@@ -92,7 +94,7 @@
 
     async function refreshCaptcha() {
       try {
-        var res = await fetch('/api/captcha-challenge?slug=' + encodeURIComponent(SLUG) + '&_=' + Date.now());
+        var res = await fetch(ADMIN_ORIGIN + '/api/captcha-challenge?slug=' + encodeURIComponent(SLUG) + '&domain=' + encodeURIComponent(DOMAIN) + '&_=' + Date.now());
         var data = await res.json();
         if (!res.ok) {
           document.getElementById('t_err').textContent = data.error || 'Error';
@@ -102,9 +104,9 @@
         currentChallengeId = data.challengeId;
         document.getElementById('challengeId').value = currentChallengeId;
 
-        // El challengeId viene como "sig.base64(payload)" donde payload = slug|text
         var payload = atob(currentChallengeId.split('.')[1]);
-        currentText = payload.split('|')[1] || '';
+        var parts = payload.split('|');
+        currentText = parts[2] || '';
 
         drawCaptcha(currentText);
         document.getElementById('captchaAnswer').value = '';
@@ -121,14 +123,12 @@
       var w = canvas.width;
       var h = canvas.height;
 
-      // Fondo
       var grad = ctx.createLinearGradient(0, 0, w, h);
       grad.addColorStop(0, '#0c110e');
       grad.addColorStop(1, '#131a16');
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, w, h);
 
-      // Ruido (puntos)
       for (var i = 0; i < 60; i++) {
         ctx.fillStyle = 'rgba(16, 185, 129, ' + (0.1 + Math.random() * 0.3) + ')';
         ctx.beginPath();
@@ -136,7 +136,6 @@
         ctx.fill();
       }
 
-      // Líneas curvas
       for (var i = 0; i < 3; i++) {
         ctx.strokeStyle = 'rgba(16, 185, 129, ' + (0.15 + Math.random() * 0.2) + ')';
         ctx.lineWidth = 1 + Math.random() * 1.5;
@@ -150,7 +149,6 @@
         ctx.stroke();
       }
 
-      // Texto distorsionado
       var charWidth = w / (text.length + 1);
       for (var i = 0; i < text.length; i++) {
         ctx.save();
@@ -169,8 +167,7 @@
     }
 
     document.getElementById('captchaForm').addEventListener('submit', function(e) {
-      // El form se envía por POST a la misma URL con challengeId + captcha_answer
-      // El servidor valida y emite cookie si es correcto
+      // POST a la misma URL con challengeId + captcha_answer
     });
 
     var saved = localStorage.getItem('gs_lang') || 'es_es';

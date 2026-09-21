@@ -112,6 +112,7 @@
     .tag-captcha { background: rgba(30, 58, 138, 0.5); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.3); }
     .tag-exp { background: rgba(127, 29, 29, 0.5); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); }
     .tag-folder { background: rgba(30, 41, 59, 0.6); color: #cbd5e1; border: 1px solid rgba(100, 116, 139, 0.3); }
+    .tag-domain { background: rgba(6, 78, 59, 0.5); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.3); font-family: ui-monospace, "SF Mono", Menlo, monospace; }
     .bulk-bar { display: none; align-items: center; gap: 12px; padding: 12px 16px; background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.1) 100%); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 12px; margin-bottom: 16px; animation: slideDown 0.3s ease; flex-wrap: wrap; }
     .bulk-bar.active { display: flex; }
     .bulk-bar span { font-size: 13px; font-weight: 600; color: #10b981; }
@@ -190,6 +191,8 @@
     .folder-filter-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
     .folder-filter-bar label { margin: 0; }
     .folder-filter-bar select { width: auto; min-width: 200px; }
+    .legacy-banner { background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(180, 83, 9, 0.1) 100%); border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 12px; padding: 14px 18px; margin-top: 20px; display: flex; align-items: center; gap: 12px; color: #fbbf24; font-size: 13px; font-weight: 600; animation: slideDown 0.4s ease; }
+    .legacy-banner .icon { font-size: 20px; flex-shrink: 0; }
     @media (max-width: 900px) {
       .hub-modal-grid { grid-template-columns: 1fr; }
       .hub-preview-frame { height: 400px; }
@@ -272,10 +275,6 @@
       </ul>
       <p style="margin-top:12px;">Source: <a href="https://github.com/quasvx/GreenShort" target="_blank" rel="noopener">github.com/quasvx/GreenShort</a></p>
     </div>
-    <div style="display:flex;justify-content:center;align-items:center;gap:16px;margin-top:20px;flex-wrap:wrap;">
-      <img src="/gs-files/static/TqwfdhrUPXPqySrcPMTe.png" alt="GreenShort" style="max-width:140px;width:100%;height:auto;border-radius:12px;">
-      <img src="/gs-files/static/pbhnwQeqXwmSkfCcThCz.png" alt="GreenShort" style="max-width:140px;width:100%;height:auto;border-radius:12px;">
-    </div>
   </div>
 
   <div id="dashView" style="display:none;">
@@ -296,6 +295,8 @@
       <div class="folder-filter-bar">
         <label data-i18n="folder_filter">Carpeta</label>
         <select id="linksFolderFilter" onchange="onFolderFilterChange()"></select>
+        <label data-i18n="lbl_domain">Dominio</label>
+        <select id="linksDomainFilter" onchange="onDomainFilterChange()"></select>
       </div>
       <div id="linksBulkBar" class="bulk-bar">
         <span id="linksSelectedCount" data-i18n="msg_selected">0 seleccionados</span>
@@ -311,6 +312,7 @@
           <thead><tr>
             <th class="checkbox-cell"><input type="checkbox" id="linksSelectAll" onchange="toggleSelectAll('links', this.checked)"></th>
             <th data-i18n="th_slug">Slug</th>
+            <th data-i18n="th_domain">Dominio</th>
             <th data-i18n="th_dest">Destino</th>
             <th data-i18n="th_folder">Carpeta</th>
             <th data-i18n="th_sec">Estado</th>
@@ -327,6 +329,8 @@
       <div class="folder-filter-bar">
         <label data-i18n="folder_filter">Carpeta</label>
         <select id="hubsFolderFilter" onchange="onFolderFilterChange()"></select>
+        <label data-i18n="lbl_domain">Dominio</label>
+        <select id="hubsDomainFilter" onchange="onDomainFilterChange()"></select>
       </div>
       <div id="hubsBulkBar" class="bulk-bar">
         <span id="hubsSelectedCount" data-i18n="msg_selected">0 seleccionados</span>
@@ -342,6 +346,7 @@
           <thead><tr>
             <th class="checkbox-cell"><input type="checkbox" id="hubsSelectAll" onchange="toggleSelectAll('hubs', this.checked)"></th>
             <th data-i18n="th_slug">Slug</th>
+            <th data-i18n="th_domain">Dominio</th>
             <th data-i18n="th_title">Título</th>
             <th data-i18n="th_folder">Carpeta</th>
             <th data-i18n="th_type">Tipo</th>
@@ -372,6 +377,7 @@
         <table>
           <thead><tr>
             <th data-i18n="th_slug">Ruta</th>
+            <th data-i18n="th_domain">Dominio</th>
             <th data-i18n="th_flow_date">Fecha</th>
             <th data-i18n="th_country">País</th>
             <th data-i18n="th_flow_referrer">Referente</th>
@@ -381,6 +387,11 @@
           <tbody id="analyticsBody"></tbody>
         </table>
       </div>
+    </div>
+
+    <div id="legacyBanner" class="legacy-banner" style="display:none;">
+      <span class="icon">⚠️</span>
+      <span data-i18n="legacy_warning">Modo legacy activo. Define la variable DOMAINS en Cloudflare para activar el modo multi-dominio.</span>
     </div>
   </div>
 </div>
@@ -392,6 +403,10 @@
     <div class="modal-header">
       <h2 id="linkModalTitle" data-i18n="modal_link_title">✨ Crear Enlace</h2>
       <button class="modal-close" onclick="closeModals()">✕</button>
+    </div>
+    <div>
+      <label data-i18n="lbl_domain">Dominio</label>
+      <select id="linkDomainSelect"></select>
     </div>
     <div>
       <label id="lblSlugDynamic" data-i18n="lbl_slug">Slug Personalizado</label>
@@ -473,6 +488,10 @@
 
     <div class="hub-modal-grid">
       <div class="hub-modal-form">
+        <div>
+          <label data-i18n="lbl_domain">Dominio</label>
+          <select id="hubDomainSelect"></select>
+        </div>
         <div class="grid-2">
           <div>
             <label id="lblHubSlugDynamic" data-i18n="lbl_hub_slug">Slug</label>
@@ -560,7 +579,7 @@
       <div class="hub-preview-wrap">
         <label style="margin-top:0;">Preview</label>
         <div class="hub-preview-frame">
-          <iframe id="hubPreviewFrame" sandbox="allow-same-origin"></iframe>
+          <iframe id="hubPreviewFrame" sandbox="allow-same-origin allow-scripts"></iframe>
         </div>
       </div>
     </div>
@@ -672,7 +691,7 @@
 
 <script>
   var DICT_CACHE = {};
-  var appConfig = { maxSlugLength: 20, maxExpirationDays: 365, reservedSlugs: [] };
+  var appConfig = { maxSlugLength: 20, maxExpirationDays: 365, reservedSlugs: [], domains: {}, adminHost: null, shorteners: [], legacy: false };
   var selectedLinks = new Set();
   var selectedHubs = new Set();
   var curLang = localStorage.getItem('gs_lang') || 'es_es';
@@ -689,6 +708,8 @@
   var hubPreviewTimer = null;
   var linksFolderFilter = 'all';
   var hubsFolderFilter = 'all';
+  var linksDomainFilter = 'all';
+  var hubsDomainFilter = 'all';
   var folderModalMode = 'create';
   var folderModalParent = null;
   var folderModalEditId = null;
@@ -746,8 +767,10 @@
     loadStorage();
   }
 
+  // ✅ CAMBIO 1: el slug vacío ya NO es reservado en el cliente
   function isReservedSlugClient(slug) {
-    if (!slug) return true;
+    if (slug === null || slug === undefined) return true;
+    if (slug === "") return false; // raíz del shortener = válida
     var first = slug.split('/')[0].toLowerCase();
     if (appConfig.reservedSlugs && appConfig.reservedSlugs.indexOf(first) !== -1) return true;
     if (first.charAt(0) === '_') return true;
@@ -779,6 +802,7 @@
     currentDict = await loadLocale(l);
     applyTranslations();
     rebuildFolderSelects();
+    rebuildDomainFilters();
     if (loadedLinks.length) renderTables(loadedLinks);
     if (loadedFolders.length) renderFolders();
     loadStorage();
@@ -851,6 +875,7 @@
       document.getElementById('dashView').style.display = 'block';
       applyTranslations();
       await loadConfig();
+      if (appConfig.legacy) document.getElementById('legacyBanner').style.display = 'flex';
       await loadStorage();
       await loadFolders();
       await loadLinks();
@@ -868,6 +893,8 @@
       if (res.ok) {
         appConfig = await res.json();
         if (!appConfig.reservedSlugs) appConfig.reservedSlugs = [];
+        if (!appConfig.domains) appConfig.domains = {};
+        if (!appConfig.shorteners) appConfig.shorteners = [];
         var slugInput = document.getElementById('slugInput');
         if (slugInput) slugInput.setAttribute('maxlength', appConfig.maxSlugLength);
         var hubSlug = document.getElementById('hubSlug');
@@ -879,6 +906,8 @@
           if (parseInt(slugLen.value) > appConfig.maxSlugLength) slugLen.value = appConfig.maxSlugLength;
         }
         applyTranslations();
+        rebuildDomainSelects();
+        rebuildDomainFilters();
       }
     } catch (e) {}
   }
@@ -962,6 +991,30 @@
     if (hbf) hbf.innerHTML = selOpts;
   }
 
+  function rebuildDomainSelects() {
+    var t = currentDict || {};
+    var hosts = appConfig.shorteners || [];
+    var html = hosts.map(function(h) { return '<option value="' + h + '">' + h + '</option>'; }).join('');
+    if (hosts.length === 0) html = '<option value="">—</option>';
+
+    var lds = document.getElementById('linkDomainSelect');
+    if (lds) { var cur = lds.value; lds.innerHTML = html; if (cur && hosts.indexOf(cur) !== -1) lds.value = cur; }
+    var hds = document.getElementById('hubDomainSelect');
+    if (hds) { var cur2 = hds.value; hds.innerHTML = html; if (cur2 && hosts.indexOf(cur2) !== -1) hds.value = cur2; }
+  }
+
+  function rebuildDomainFilters() {
+    var t = currentDict || {};
+    var hosts = appConfig.shorteners || [];
+    var html = '<option value="all">' + (t.domain_all || 'Todos los dominios') + '</option>';
+    hosts.forEach(function(h) { html += '<option value="' + h + '">' + h + '</option>'; });
+
+    var ldf = document.getElementById('linksDomainFilter');
+    if (ldf) { ldf.innerHTML = html; ldf.value = linksDomainFilter; }
+    var hdf = document.getElementById('hubsDomainFilter');
+    if (hdf) { hdf.innerHTML = html; hdf.value = hubsDomainFilter; }
+  }
+
   function renderFolders() {
     var t = currentDict || {};
     var tree = document.getElementById('foldersTree');
@@ -1038,12 +1091,23 @@
     if (loadedLinks.length) renderTables(loadedLinks);
   }
 
+  function onDomainFilterChange() {
+    linksDomainFilter = document.getElementById('linksDomainFilter').value;
+    hubsDomainFilter = document.getElementById('hubsDomainFilter').value;
+    if (loadedLinks.length) renderTables(loadedLinks);
+  }
+
   function filterByFolder(list, filter) {
     if (filter === 'all') return list;
     if (filter === '__unassigned__') return list.filter(function(l) { return !l.folder_id; });
     var subs = loadedFolders.filter(function(f) { return f.parent_id === filter; }).map(function(f) { return f.id; });
     var ids = [filter].concat(subs);
     return list.filter(function(l) { return ids.indexOf(l.folder_id) !== -1; });
+  }
+
+  function filterByDomain(list, filter) {
+    if (filter === 'all') return list;
+    return list.filter(function(l) { return l.domain === filter; });
   }
 
   function closeModals() {
@@ -1092,6 +1156,8 @@
       document.getElementById('expUnit').value = 'minutes';
       document.getElementById('linkCaptcha').checked = false;
       document.getElementById('linkFolderSelect').value = '';
+      var lds = document.getElementById('linkDomainSelect');
+      if (lds && lds.options.length > 0) lds.selectedIndex = 0;
       validateSlug(document.getElementById('slugInput'));
     }
     initPwdWraps();
@@ -1113,6 +1179,8 @@
     document.getElementById('hubPassword').value = '';
     document.getElementById('hubCaptcha').checked = false;
     document.getElementById('hubFolderSelect').value = '';
+    var hds = document.getElementById('hubDomainSelect');
+    if (hds && hds.options.length > 0) hds.selectedIndex = 0;
     document.getElementById('btnSaveHub').disabled = false;
     document.getElementById('btnSaveHub').textContent = t.btn_save || 'Guardar';
     hubAvatarDataUrl = null;
@@ -1193,10 +1261,16 @@
     validateSlug(input);
   }
 
+  // ✅ CAMBIO 2: cuando el slug está vacío, mostrar hint "redirige la raíz"
   function validateSlug(el) {
     var val = el.value.toLowerCase();
     var count = document.getElementById('slugFeedback');
     if (!count) return;
+    if (val === '') {
+      count.textContent = (currentDict.slug_empty_hint || 'Vacío = redirige la raíz del dominio');
+      count.style.color = '#10b981';
+      return;
+    }
     count.textContent = val.length + ' / ' + appConfig.maxSlugLength;
     var firstSegment = val.split('/')[0];
     if (isReservedSlugClient(firstSegment)) {
@@ -1252,12 +1326,14 @@
     }
   }
 
+  // ✅ CAMBIO 3: quitar el bloqueo `if (!slug)` — el server decide
   async function saveLink() {
     var t = currentDict || {};
     var btn = document.getElementById('btnSaveLink');
     var slug = document.getElementById('slugInput').value.toLowerCase();
     slug = slug.replace(/[^a-z0-9_\/.-]/g, '').replace(/^\/+/, '').replace(/\/+/g, '/').replace(/\/+$/, '');
     document.getElementById('slugInput').value = slug;
+    var domain = document.getElementById('linkDomainSelect').value;
     var targetUrl = document.getElementById('targetUrl').value.trim();
     var splat = document.getElementById('splat').checked;
     var password = document.getElementById('linkPassword').value;
@@ -1272,23 +1348,25 @@
     try {
       if (!targetUrl) { errorEl.textContent = t.msg_error_url_required || '❌ URL requerida'; errorEl.style.display = 'block'; return; }
       try { new URL(targetUrl); } catch(e) { errorEl.textContent = t.msg_error_url_invalid || '❌ URL inválida'; errorEl.style.display = 'block'; return; }
-      if (!slug) { errorEl.textContent = t.msg_error_slug_required || '❌ Slug requerido'; errorEl.style.display = 'block'; return; }
-      if (!/^[a-z0-9_\/.-]+$/.test(slug) || slug.startsWith('/') || slug.endsWith('/') || slug.includes('//') || slug.startsWith('.') || slug.endsWith('.') || slug.includes('..')) {
-        errorEl.textContent = t.msg_error_slug_format || '❌ Formato inválido';
-        errorEl.style.display = 'block';
-        return;
-      }
-      if (isReservedSlugClient(slug.split('/')[0])) {
-        errorEl.textContent = t.msg_error_slug_reserved || '❌ Ruta reservada';
-        errorEl.style.display = 'block';
-        return;
+      // ✅ Slug vacío permitido (redirige la raíz). Solo validamos formato si NO está vacío.
+      if (slug !== '') {
+        if (!/^[a-z0-9_\/.-]+$/.test(slug) || slug.startsWith('/') || slug.endsWith('/') || slug.includes('//') || slug.startsWith('.') || slug.endsWith('.') || slug.includes('..')) {
+          errorEl.textContent = t.msg_error_slug_format || '❌ Formato inválido';
+          errorEl.style.display = 'block';
+          return;
+        }
+        if (!appConfig.legacy && isReservedSlugClient(slug.split('/')[0])) {
+          errorEl.textContent = t.msg_error_slug_reserved || '❌ Ruta reservada';
+          errorEl.style.display = 'block';
+          return;
+        }
       }
       msg.textContent = t.msg_loading || '...';
       msg.style.color = '#94a3b8';
       var res = await fetch('/api/create', {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug, targetUrl, splat, password, captcha, expAmount, expUnit, folder_id })
+        body: JSON.stringify({ domain, slug, targetUrl, splat, password, captcha, expAmount, expUnit, folder_id })
       });
       var data = null;
       try { data = await res.json(); } catch(e) {}
@@ -1312,6 +1390,7 @@
     var slug = document.getElementById('hubSlug').value.toLowerCase();
     slug = slug.replace(/[^a-z0-9_\/.-]/g, '').replace(/^\/+/, '').replace(/\/+/g, '/').replace(/\/+$/, '');
     document.getElementById('hubSlug').value = slug;
+    var domain = document.getElementById('hubDomainSelect').value;
     var mode = document.getElementById('hubMode').value;
     var title = document.getElementById('hubTitle').value.trim();
     var bio = document.getElementById('hubBio').value.trim();
@@ -1330,10 +1409,8 @@
       if (!/^[a-z0-9_\/.-]+$/.test(slug) || slug.startsWith('/') || slug.endsWith('/') || slug.includes('//') || slug.startsWith('.') || slug.endsWith('.') || slug.includes('..')) {
         errorEl.textContent = t.msg_error_slug_format || '❌ Formato inválido'; errorEl.style.display = 'block'; return;
       }
-      if (isReservedSlugClient(slug.split('/')[0])) {
-        errorEl.textContent = t.msg_error_slug_reserved || '❌ Ruta reservada';
-        errorEl.style.display = 'block';
-        return;
+      if (!appConfig.legacy && isReservedSlugClient(slug.split('/')[0])) {
+        errorEl.textContent = t.msg_error_slug_reserved || '❌ Ruta reservada'; errorEl.style.display = 'block'; return;
       }
       var items = [];
       if (mode === 'builder') {
@@ -1351,7 +1428,7 @@
       var res = await fetch('/api/save-hub', {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug, mode, title, bio, theme_palette, btn_style, custom_html, password, captcha, items, avatar_url: avatarUrl, folder_id })
+        body: JSON.stringify({ domain, slug, mode, title, bio, theme_palette, btn_style, custom_html, password, captcha, items, avatar_url: avatarUrl, folder_id })
       });
       var data = null;
       try { data = await res.json(); } catch(e) {}
@@ -1412,6 +1489,11 @@
     return '<span class="tag tag-folder">📁 ' + name + '</span>';
   }
 
+  function domainTagHtml(domain) {
+    if (!domain) return '<span class="tag tag-domain">legacy</span>';
+    return '<span class="tag tag-domain">' + domain + '</span>';
+  }
+
   function renderTables(list) {
     var t = currentDict || {};
     var btnCopy = t.btn_copy || 'Copy';
@@ -1425,14 +1507,14 @@
     hubsTbody.innerHTML = '';
     var directLinks = list.filter(function(l) { return l.type === 'direct'; });
     var hubs = list.filter(function(l) { return l.type === 'group'; });
-    var filteredLinks = filterByFolder(directLinks, linksFolderFilter);
-    var filteredHubs = filterByFolder(hubs, hubsFolderFilter);
+    var filteredLinks = filterByDomain(filterByFolder(directLinks, linksFolderFilter), linksDomainFilter);
+    var filteredHubs = filterByDomain(filterByFolder(hubs, hubsFolderFilter), hubsDomainFilter);
 
     filteredLinks.forEach(function(l, i) {
       var tr = document.createElement('tr');
       tr.className = 'row-enter';
       tr.style.animationDelay = (i * 0.02) + 's';
-      var checked = selectedLinks.has(l.slug) ? 'checked' : '';
+      var checked = selectedLinks.has(l.domain + '|' + l.slug) ? 'checked' : '';
       var lockTag = l.password ? '<span class="tag tag-lock">🔒</span>' : '';
       var captchaTag = l.captcha ? '<span class="tag tag-captcha">🧩</span>' : '';
       var expTag = '';
@@ -1440,17 +1522,20 @@
         var diff = Number(l.expires_at) - Date.now();
         expTag = diff <= 0 ? ' <span class="tag tag-exp">' + (t.label_expired || 'EXP') + '</span>' : '';
       }
-      tr.innerHTML = '<td class="checkbox-cell"><input type="checkbox" data-slug="' + l.slug + '" data-type="links" ' + checked + ' onchange="toggleItem(this)"></td>' +
-        '<td style="font-weight:700; color:#10b981;">/' + l.slug + '</td>' +
+      // ✅ Mostrar "/" cuando el slug es vacío (raíz del dominio)
+      var slugDisplay = l.slug === '' ? '/' : ('/' + l.slug);
+      tr.innerHTML = '<td class="checkbox-cell"><input type="checkbox" data-slug="' + l.slug + '" data-domain="' + (l.domain || '') + '" data-type="links" ' + checked + ' onchange="toggleItem(this)"></td>' +
+        '<td style="font-weight:700; color:#10b981;">' + slugDisplay + '</td>' +
+        '<td>' + domainTagHtml(l.domain) + '</td>' +
         '<td style="color:#94a3b8; font-size:12px;">' + l.target_url + '</td>' +
         '<td>' + folderTagHtml(l.folder_id) + '</td>' +
         '<td>' + lockTag + captchaTag + expTag + '</td>' +
         '<td style="font-weight:800; color:#10b981; font-size:14px;">' + (l.clicks || 0) + '</td>' +
         '<td><div class="btn-group">' +
-        '<button class="btn-action" onclick="copyUrl(\'' + l.slug + '\', this)">' + btnCopy + '</button>' +
-        '<button class="btn-action" onclick="openQrModal(\'' + l.slug + '\')">' + btnQr + '</button>' +
-        '<button class="btn-action" onclick="editLink(\'' + l.slug + '\')">' + btnEdit + '</button>' +
-        '<button class="btn-action btn-del" onclick="delItem(\'' + l.slug + '\')">' + btnDelete + '</button>' +
+        '<button class="btn-action" onclick="copyUrl(\'' + l.domain + '\',\'' + l.slug + '\', this)">' + btnCopy + '</button>' +
+        '<button class="btn-action" onclick="openQrModal(\'' + l.domain + '\',\'' + l.slug + '\')">' + btnQr + '</button>' +
+        '<button class="btn-action" onclick="editLink(\'' + l.domain + '\',\'' + l.slug + '\')">' + btnEdit + '</button>' +
+        '<button class="btn-action btn-del" onclick="delItem(\'' + l.domain + '\',\'' + l.slug + '\')">' + btnDelete + '</button>' +
         '</div></td>';
       linksTbody.appendChild(tr);
     });
@@ -1459,26 +1544,27 @@
       var tr = document.createElement('tr');
       tr.className = 'row-enter';
       tr.style.animationDelay = (i * 0.02) + 's';
-      var checked = selectedHubs.has(l.slug) ? 'checked' : '';
+      var checked = selectedHubs.has(l.domain + '|' + l.slug) ? 'checked' : '';
       var lockTag = l.password ? '<span class="tag tag-lock">🔒</span>' : '';
       var captchaTag = l.captcha ? '<span class="tag tag-captcha">🧩</span>' : '';
-      tr.innerHTML = '<td class="checkbox-cell"><input type="checkbox" data-slug="' + l.slug + '" data-type="hubs" ' + checked + ' onchange="toggleItem(this)"></td>' +
+      tr.innerHTML = '<td class="checkbox-cell"><input type="checkbox" data-slug="' + l.slug + '" data-domain="' + (l.domain || '') + '" data-type="hubs" ' + checked + ' onchange="toggleItem(this)"></td>' +
         '<td style="font-weight:700; color:#a5b4fc;">/' + l.slug + '</td>' +
+        '<td>' + domainTagHtml(l.domain) + '</td>' +
         '<td style="color:#e2e8f0; font-size:12px;">' + (t.label_hub || 'Conjunto') + '</td>' +
         '<td>' + folderTagHtml(l.folder_id) + '</td>' +
         '<td><span class="tag tag-hub">Hub</span> ' + lockTag + captchaTag + '</td>' +
         '<td style="font-weight:800; color:#10b981; font-size:14px;">' + (l.clicks || 0) + '</td>' +
         '<td><div class="btn-group">' +
-        '<button class="btn-action" onclick="copyUrl(\'' + l.slug + '\', this)">' + btnCopy + '</button>' +
-        '<button class="btn-action" onclick="openQrModal(\'' + l.slug + '\')">' + btnQr + '</button>' +
-        '<button class="btn-action" onclick="editHub(\'' + l.slug + '\')">' + btnEdit + '</button>' +
-        '<button class="btn-action btn-del" onclick="delItem(\'' + l.slug + '\')">' + btnDelete + '</button>' +
+        '<button class="btn-action" onclick="copyUrl(\'' + l.domain + '\',\'' + l.slug + '\', this)">' + btnCopy + '</button>' +
+        '<button class="btn-action" onclick="openQrModal(\'' + l.domain + '\',\'' + l.slug + '\')">' + btnQr + '</button>' +
+        '<button class="btn-action" onclick="editHub(\'' + l.domain + '\',\'' + l.slug + '\')">' + btnEdit + '</button>' +
+        '<button class="btn-action btn-del" onclick="delItem(\'' + l.domain + '\',\'' + l.slug + '\')">' + btnDelete + '</button>' +
         '</div></td>';
       hubsTbody.appendChild(tr);
     });
 
-    if (filteredLinks.length === 0) linksTbody.innerHTML = '<tr><td colspan="7" class="empty-state">' + (t.empty_links || 'No hay enlaces') + '</td></tr>';
-    if (filteredHubs.length === 0) hubsTbody.innerHTML = '<tr><td colspan="7" class="empty-state">' + (t.empty_hubs || 'No hay conjuntos') + '</td></tr>';
+    if (filteredLinks.length === 0) linksTbody.innerHTML = '<tr><td colspan="8" class="empty-state">' + (t.empty_links || 'No hay enlaces') + '</td></tr>';
+    if (filteredHubs.length === 0) hubsTbody.innerHTML = '<tr><td colspan="8" class="empty-state">' + (t.empty_hubs || 'No hay conjuntos') + '</td></tr>';
 
     updateBulkBar('links');
     updateBulkBar('hubs');
@@ -1488,9 +1574,11 @@
 
   function toggleItem(checkbox) {
     var slug = checkbox.getAttribute('data-slug');
+    var domain = checkbox.getAttribute('data-domain') || '';
     var type = checkbox.getAttribute('data-type');
+    var key = domain + '|' + slug;
     var set = type === 'links' ? selectedLinks : selectedHubs;
-    if (checkbox.checked) set.add(slug); else set.delete(slug);
+    if (checkbox.checked) set.add(key); else set.delete(key);
     updateBulkBar(type);
   }
 
@@ -1500,7 +1588,8 @@
     var rows = document.querySelectorAll('#' + type + 'Table tbody input[type="checkbox"]');
     for (var i = 0; i < rows.length; i++) {
       var slug = rows[i].getAttribute('data-slug');
-      if (slug && checked) { set.add(slug); rows[i].checked = true; }
+      var domain = rows[i].getAttribute('data-domain') || '';
+      if (slug && checked) { set.add(domain + '|' + slug); rows[i].checked = true; }
       else rows[i].checked = false;
     }
     updateBulkBar(type);
@@ -1511,8 +1600,8 @@
     if (!selectAll) return;
     var set = type === 'links' ? selectedLinks : selectedHubs;
     if (items.length === 0) { selectAll.checked = false; selectAll.indeterminate = false; return; }
-    var allSelected = items.every(function(it) { return set.has(it.slug); });
-    var someSelected = items.some(function(it) { return set.has(it.slug); });
+    var allSelected = items.every(function(it) { return set.has((it.domain || '') + '|' + it.slug); });
+    var someSelected = items.some(function(it) { return set.has((it.domain || '') + '|' + it.slug); });
     selectAll.checked = allSelected;
     selectAll.indeterminate = someSelected && !allSelected;
   }
@@ -1540,21 +1629,30 @@
     if (selectAll) { selectAll.checked = false; selectAll.indeterminate = false; }
   }
 
+  function setToItems(set) {
+    var arr = [];
+    set.forEach(function(k) {
+      var idx = k.indexOf('|');
+      arr.push({ domain: k.substring(0, idx), slug: k.substring(idx + 1) });
+    });
+    return arr;
+  }
+
   async function bulkDelete(type) {
     var set = type === 'links' ? selectedLinks : selectedHubs;
     if (set.size === 0) return;
     var tmpl = (currentDict.msg_confirm_bulk || '¿Eliminar %d?');
     if (!confirm(tmpl.replace('%d', set.size))) return;
-    var slugs = Array.from(set);
+    var items = setToItems(set);
     try {
       var res = await fetch('/api/delete', {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slugs: slugs })
+        body: JSON.stringify({ items: items })
       });
       if (res.status === 401) { setTimeout(logout, 100); return; }
       if (!res.ok) throw new Error('HTTP ' + res.status);
-      showToast('✅ ' + slugs.length, 'success');
+      showToast('✅ ' + items.length, 'success');
       set.clear();
       await loadLinks();
       await loadStorage();
@@ -1569,15 +1667,16 @@
     if (set.size === 0) return;
     var sel = document.getElementById(type === 'links' ? 'linksBulkFolderSelect' : 'hubsBulkFolderSelect');
     var folderId = sel ? (sel.value || null) : null;
+    var items = setToItems(set);
     try {
       var res = await fetch('/api/move-to-folder', {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slugs: Array.from(set), folder_id: folderId })
+        body: JSON.stringify({ items: items, folder_id: folderId })
       });
       if (res.status === 401) { setTimeout(logout, 100); return; }
       if (!res.ok) throw new Error('HTTP ' + res.status);
-      showToast((currentDict.folder_moved || 'Items movidos') + ': ' + set.size, 'success');
+      showToast((currentDict.folder_moved || 'Items movidos') + ': ' + items.length, 'success');
       set.clear();
       await loadLinks();
     } catch (error) {
@@ -1585,8 +1684,8 @@
     }
   }
 
-  function copyUrl(slug, btn) {
-    var full = window.location.origin + '/' + slug;
+  function copyUrl(domain, slug, btn) {
+    var full = 'https://' + domain + '/' + slug;
     navigator.clipboard.writeText(full).then(function() {
       var old = btn.textContent;
       btn.textContent = '✅';
@@ -1607,8 +1706,8 @@
     }).catch(function() { showToast('❌', 'error'); });
   }
 
-  function editLink(slug) {
-    var item = loadedLinks.find(function(l) { return l.slug === slug; });
+  function editLink(domain, slug) {
+    var item = loadedLinks.find(function(l) { return l.domain === domain && l.slug === slug; });
     if (!item) { showToast('❌', 'error'); return; }
     openLinkModal(true);
     document.getElementById('slugInput').value = item.slug;
@@ -1617,12 +1716,15 @@
     document.getElementById('linkPassword').value = item.password || '';
     document.getElementById('linkCaptcha').checked = item.captcha === 1;
     document.getElementById('linkFolderSelect').value = item.folder_id || '';
+    var lds = document.getElementById('linkDomainSelect');
+    if (lds) lds.value = item.domain || '';
+    validateSlug(document.getElementById('slugInput'));
     initPwdWraps();
   }
 
-  async function editHub(slug) {
+  async function editHub(domain, slug) {
     try {
-      var res = await fetch('/api/hub-config?slug=' + encodeURIComponent(slug), {
+      var res = await fetch('/api/hub-config?slug=' + encodeURIComponent(slug) + '&domain=' + encodeURIComponent(domain), {
         headers: { 'Authorization': 'Bearer ' + token }
       });
       if (res.status === 401) { setTimeout(logout, 100); return; }
@@ -1633,6 +1735,8 @@
       document.getElementById('hubPassword').value = hub.password || '';
       document.getElementById('hubCaptcha').checked = hub.captcha === 1;
       document.getElementById('hubFolderSelect').value = hub.folder_id || '';
+      var hds = document.getElementById('hubDomainSelect');
+      if (hds) hds.value = hub.domain || '';
       toggleHubMode();
       if (hub.mode === 'custom_html') {
         document.getElementById('hubCustomHtml').value = hub.custom_html || '';
@@ -1664,14 +1768,15 @@
     } catch (error) { showToast('❌ ' + error.message, 'error'); }
   }
 
-  async function delItem(slug) {
+  async function delItem(domain, slug) {
     var tmpl = (currentDict.msg_confirm_delete || '¿Eliminar /%s?');
-    if (!confirm(tmpl.replace('%s', slug))) return;
+    var display = slug === '' ? '/' : ('/' + slug);
+    if (!confirm(tmpl.replace('%s', display))) return;
     try {
       var res = await fetch('/api/delete', {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug })
+        body: JSON.stringify({ items: [{ domain: domain, slug: slug }] })
       });
       if (res.status === 401) { setTimeout(logout, 100); return; }
       if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -1742,13 +1847,15 @@
       if (!Array.isArray(list)) throw new Error('Invalid');
       var tbody = document.getElementById('analyticsBody');
       tbody.innerHTML = '';
-      if (list.length === 0) tbody.innerHTML = '<tr><td colspan="6" class="empty-state">' + (t.msg_no_data || 'No hay datos') + '</td></tr>';
+      if (list.length === 0) tbody.innerHTML = '<tr><td colspan="7" class="empty-state">' + (t.msg_no_data || 'No hay datos') + '</td></tr>';
       else {
         list.forEach(function(a, i) {
           var tr = document.createElement('tr');
           tr.className = 'row-enter';
           tr.style.animationDelay = (i * 0.02) + 's';
-          tr.innerHTML = '<td style="font-weight:700; color:#10b981;">/' + a.slug + '</td>' +
+          var slugDisplay = a.slug === '' ? '/' : ('/' + a.slug);
+          tr.innerHTML = '<td style="font-weight:700; color:#10b981;">' + slugDisplay + '</td>' +
+            '<td>' + domainTagHtml(a.domain) + '</td>' +
             '<td style="font-size:11px; color:#64748b;">' + (a.created_at || '—') + '</td>' +
             '<td>' + (a.country || 'XX') + '</td>' +
             '<td style="font-size:11px; color:#94a3b8;">' + (a.referrer || '—') + '</td>' +
@@ -1861,9 +1968,9 @@
     }
   }
 
-  function openQrModal(slug) {
-    qrCurrentSlug = slug;
-    var url = window.location.origin + '/' + slug;
+  function openQrModal(domain, slug) {
+    qrCurrentSlug = slug || 'root';
+    var url = 'https://' + domain + '/' + slug;
     document.getElementById('qrUrlText').textContent = url;
     document.getElementById('qrError').style.display = 'none';
     var modal = document.getElementById('qrModal');
@@ -2084,7 +2191,6 @@
     var keys = Array.from(params.keys());
     for (var i = 0; i < keys.length; i++) {
       var k = keys[i];
-      var v = params.get(k);
       if (k === 'links') { switchTab('links'); return; }
       if (k === 'hubs') { switchTab('hubs'); return; }
       if (k === 'folders') { switchTab('folders'); return; }

@@ -38,6 +38,15 @@ Create links with a custom or random slug.
 Supports nested routes like `my_brand/promo/summer`.
 Each link can point to its own destination URL.
 
+**Root redirect (empty slug)**
+Leave the slug empty to redirect the root of a shortener domain.
+A link with an empty slug captures `https://yourdomain.com/`
+and can optionally forward the full subpath to the destination
+when splat is enabled. This turns a shortener domain into a
+transparent proxy: `/anything/here` becomes `target.com/anything/here`.
+Useful for mirroring entire sites under a short domain or for
+domain-wide redirects with path preservation.
+
 **Link hubs (link-in-bio)**
 Design link-in-bio style pages with multiple buttons, title, bio,
 custom profile picture, and color palette. Perfect for Instagram,
@@ -68,6 +77,9 @@ it to the destination. For example, `/promo/summer/discount` can
 forward `/discount` to the target URL. Child links under a splat
 parent are fully supported, so `/promo/wa` can be a standalone
 link while `/promo/anything` falls back to the parent splat.
+When combined with an empty-slug root link, splat turns the entire
+domain into a catch-all that preserves any subpath, while more
+specific slugs still take priority over the root fallback.
 
 **AI-generated slugs**
 Enter a URL and GreenShort analyzes the page content (title and
@@ -147,6 +159,11 @@ stored slug. If it does, it applies the corresponding rules
 (password, captcha, expiration, splat) and redirects to the
 destination. If it does not match, it falls through to the
 static files served by Pages.
+
+Slug resolution is priority-based: the longest matching slug
+wins. This makes it possible to have a root fallback (empty slug)
+that catches every unmatched path while still keeping specific
+slugs, nested routes, and child links working as expected.
 
 All data is stored in a Cloudflare D1 database: one table for
 links, one for hub configurations, and one for folders. Clicks
@@ -228,21 +245,21 @@ used as slugs:
 - `favicon.svg`
 - `robots.txt`
 - `sitemap.xml`
-- `gs`
-- `gs-files`
-- `api`
-- `lib`
-- `functions`
 
 Any slug starting with an underscore (`_`) is also reserved,
 following Cloudflare Pages conventions. The dashboard and API
 both validate this, so you cannot create a slug that would
 break the system.
 
-The `gs` folder contains the admin dashboard. The `gs-files`
-folder contains static assets like locales, images, scripts,
-and public pages. Both are served directly by Pages and never
-intercepted by the Worker's link resolution logic.
+The only exception is the empty slug (`""`), which is explicitly
+allowed and reserved for root-domain redirects. It does not
+conflict with any internal route because admin domains never
+serve links, and shortener domains never serve the dashboard.
+
+The `gs-files` folder contains static assets like locales,
+images, scripts, and public pages. It lives only on admin
+domains. Shortener domains never expose it, so slugs like
+`api`, `gs` or `gs-files` are perfectly valid there.
 
 
 ---
@@ -268,9 +285,39 @@ GreenShort is designed with security in mind:
   clicks.
 - Folder identifiers are slugified server-side, and renames are
   applied atomically across folders, subfolders and items.
+- Admin domains are strictly separated from shortener domains
+  through the `DOMAINS` variable. The dashboard only lists
+  shortener domains as valid targets, and the API rejects any
+  attempt to create a link on an admin domain.
 
 The only thing you should never do is expose your `SITE_TOKEN`
 publicly. Treat it like a password.
+
+
+---
+
+## Root redirects and catch-all domains
+
+GreenShort supports two patterns that turn a shortener domain into
+a transparent proxy:
+
+**Root-only redirect**
+Create a link with an empty slug and splat disabled.
+`https://yourdomain.com/` redirects to the target URL, and any
+other path on that domain returns 404 (unless another link
+matches it).
+
+**Catch-all with path preservation**
+Create a link with an empty slug and splat enabled.
+`https://yourdomain.com/` redirects to the target root, and every
+unmatched subpath is forwarded to the same subpath on the target:
+`/a/b` becomes `target.com/a/b`.
+
+In both cases, specific slugs and nested routes always take
+priority over the root fallback. This means you can have a
+catch-all root link pointing to `example.com`, and still create
+`/promo` → `other.com`, `/promo/summer` → `summer.com`, and so on.
+The most specific match wins.
 
 
 ---
@@ -286,7 +333,8 @@ publicly. Treat it like a password.
 6. Set the environment variables listed above.
 7. Deploy. The first request will run the database migrations
    automatically.
-8. Visit `/gs/dashboard` and log in with your `SITE_TOKEN`.
+8. Visit your admin domain (or the Pages subdomain) and log in
+   with your `SITE_TOKEN`.
 
 That is it. No build step, no external services, no maintenance.
 
@@ -302,8 +350,7 @@ That is it. No build step, no external services, no maintenance.
       [[path]].js       Worker that handles every request
       lib.js            Shared helpers (migrations, auth, captcha)
 
-    gs/
-      dashboard.html    Admin dashboard
+    index.html          Admin dashboard
 
     gs-files/
       html/set/

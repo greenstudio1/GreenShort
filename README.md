@@ -296,6 +296,44 @@ publicly. Treat it like a password.
 
 ---
 
+## Bot traffic and request limits
+
+Cloudflare Workers on the free plan include a daily request
+quota. On a public shortener, a significant part of that quota
+can be consumed by automated scanners probing random paths,
+looking for exposed files or common vulnerabilities.
+
+GreenShort is not affected by those scans in terms of data or
+security, but every request still counts against the daily quota.
+To keep the quota available for real visitors, it is recommended
+to filter bot traffic at the edge, before it reaches the Worker:
+
+- **Enable Bot Fight Mode.** In the Cloudflare dashboard, go to
+  Security > Settings and turn on Bot Fight Mode. Known bots are
+  challenged automatically and never reach the Worker.
+
+- **Add a rate limiting rule.** Cloudflare's free plan includes
+  one rate limiting rule. A simple rule that challenges IPs
+  exceeding a certain number of requests per minute to non-API
+  paths is enough to stop most scanners without affecting real
+  users.
+
+- **Use custom WAF rules.** You can block or challenge requests
+  based on User-Agent patterns, empty referrers, or paths that
+  are known not to exist (for example, `/.env`, `/wp-admin`,
+  `/config.json`).
+
+These rules run on Cloudflare's edge, before the Worker is
+invoked. Requests stopped there do not count against the Worker
+quota, so the daily limit is reserved for legitimate traffic.
+
+For deployments with very high traffic or the need for heavier
+processing per request, the Workers Paid plan raises both the
+request limit and the CPU time per invocation.
+
+
+---
+
 ## Root redirects and catch-all domains
 
 GreenShort supports two patterns that turn a shortener domain into
